@@ -22,14 +22,14 @@
                 <Attribute name="type" value="3x3Matrix" xsi:type="EnumAttributeReferenceType"/>
                 <Attribute name="mode" value="pull" xsi:type="EnumAttributeReferenceType"/>
             </Edge>
-			<Edge name="Output" source="Camera" destination="ImagePlane" displayName="Greyscale Image">
+			<Edge name="LeftOutput" source="Camera" destination="ImagePlane" displayName="Greyscale Image">
 				<Description>
 					<h:p>The camera image (greyscale).</h:p>
 				</Description>
 				<Attribute name="type" value="Image" xsi:type="EnumAttributeReferenceType"/>
 				<Attribute name="mode" value="push" xsi:type="EnumAttributeReferenceType"/>
 			</Edge>
-			<Edge name="ColorOutput" source="Camera" destination="ImagePlane" displayName="Color Image">
+			<Edge name="ColorLeftOutput" source="Camera" destination="ImagePlane" displayName="Color Image">
 				<Description>
 					<h:p>The camera image (color).</h:p>
 				</Description>
@@ -39,7 +39,7 @@
 		</Output>
 
 		<DataflowConfiguration>
-			<UbitrackLib class="ZEDFramegrabber" />
+			<UbitrackLib class="ZEDFrameGrabber" />
 
 			<Attribute name="timeOffset" default="0" xsi:type="IntAttributeDeclarationType" displayName="time offset">
 				<Description>
@@ -65,14 +65,14 @@
 		<Output>
 			<Node name="Camera" displayName="Camera" />
 			<Node name="ImagePlane" displayName="Image Plane" />
-			<Edge name="Output" source="Camera" destination="ImagePlane" displayName="Greyscale Image">
+			<Edge name="LeftOutput" source="Camera" destination="ImagePlane" displayName="Greyscale Image">
 				<Description>
 					<h:p>The camera image (greyscale).</h:p>
 				</Description>
 				<Attribute name="type" value="Image" xsi:type="EnumAttributeReferenceType"/>
 				<Attribute name="mode" value="push" xsi:type="EnumAttributeReferenceType"/>
 			</Edge>
-			<Edge name="ColorOutput" source="Camera" destination="ImagePlane" displayName="Color Image">
+			<Edge name="ColorLeftOutput" source="Camera" destination="ImagePlane" displayName="Color Image">
 				<Description>
 					<h:p>The camera image (color).</h:p>
 				</Description>
@@ -82,7 +82,7 @@
 		</Output>
 
 		<DataflowConfiguration>
-			<UbitrackLib class="DefaultFramegrabber" />
+			<UbitrackLib class="ZEDFrameGrabber" />
 
 			<Attribute name="timeOffset" default="0" xsi:type="IntAttributeDeclarationType" displayName="time offset">
 				<Description>
