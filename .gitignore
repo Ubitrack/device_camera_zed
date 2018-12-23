@@ -1,0 +1,4 @@
+build/
+*.pyc
+build_vs2013-64/
+.pytest_cache/
