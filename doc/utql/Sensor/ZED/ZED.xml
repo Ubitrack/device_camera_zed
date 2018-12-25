@@ -13,88 +13,41 @@
 			</h:p>
 		</Description>
 		<Output>
-			<Node name="Camera" displayName="Camera" />
+			<Node name="Camera" displayName="Camera" >
+				<Description><p xmlns="http://www.w3.org/1999/xhtml">ZED Camera</p></Description>
+				<Attribute name="serialNumber" value="0" xsi:type="IntAttributeReferenceType"/>
+
+				<Attribute name="zedCameraResolution" xsi:type="EnumAttributeReferenceType"/>
+				<Attribute name="zedDepthMode" xsi:type="EnumAttributeReferenceType"/>
+				<Attribute name="zedSensingMode" xsi:type="EnumAttributeReferenceType"/>
+			</Node>
 			<Node name="ImagePlane" displayName="Image Plane" />
-            <Edge name="Intrinsics" source="Camera"	destination="ImagePlane" displayName="Camera Intrinsics">
-                <Description>
-                    <h:p>The intrinsic camera matrix.</h:p>
-                </Description>
-                <Attribute name="type" value="3x3Matrix" xsi:type="EnumAttributeReferenceType"/>
-                <Attribute name="mode" value="pull" xsi:type="EnumAttributeReferenceType"/>
-            </Edge>
-			<Edge name="LeftOutput" source="Camera" destination="ImagePlane" displayName="Greyscale Image">
+			<Edge name="ImageOutput" source="Camera" destination="ImagePlane" displayName="Output Image">
 				<Description>
-					<h:p>The camera image (greyscale).</h:p>
+					<h:p>The output image.</h:p>
 				</Description>
 				<Attribute name="type" value="Image" xsi:type="EnumAttributeReferenceType"/>
 				<Attribute name="mode" value="push" xsi:type="EnumAttributeReferenceType"/>
-			</Edge>
-			<Edge name="ColorLeftOutput" source="Camera" destination="ImagePlane" displayName="Color Image">
-				<Description>
-					<h:p>The camera image (color).</h:p>
-				</Description>
-				<Attribute name="type" value="Image" xsi:type="EnumAttributeReferenceType"/>
-				<Attribute name="mode" value="push" xsi:type="EnumAttributeReferenceType"/>
+
+				<Attribute name="zedSensorType" value="VIDEO" xsi:type="EnumAttributeReferenceType"/>
+				<Attribute name="zedMeasureSource" value="DEPTH" xsi:type="EnumAttributeReferenceType"/>
+				<Attribute name="zedVideoSource" xsi:type="EnumAttributeReferenceType"/>
 			</Edge>
 		</Output>
 
 		<DataflowConfiguration>
-			<UbitrackLib class="ZEDFrameGrabber" />
+			<UbitrackLib class="ZEDVideoStream" />
 
-			<Attribute name="timeOffset" default="0" xsi:type="IntAttributeDeclarationType" displayName="time offset">
+			<Attribute name="uploadImageOnGPU" displayName="Automatic Upload on GPU" default="false" xsi:type="EnumAttributeDeclarationType">
 				<Description>
-					<h:p>Offset in ms to add to the timestamps created by the component. This is used
-					to compensate clock shift.</h:p>
+					<h:p>
+						Each grabbed Image is automatically uploaded to the GPU for further processing. Attention: Uploading and downloading images from the GPU is time consuming.
+					</h:p>
 				</Description>
+				<EnumValue name="false" displayName="False"/>
+				<EnumValue name="true"  displayName="True"/>
 			</Attribute>
-			<Attribute name="cameraName" default="" xsi:type="StringAttributeDeclarationType" displayName="camera name">
-				<Description>
-					<h:p>string that identifies the capture device in linux. Usually this is of type /dev/video0 .</h:p>
-				</Description>
-			</Attribute>
-		</DataflowConfiguration>
-	</Pattern>
 
-
-	<Pattern name="ZEDFrameGrabberUncalibrated" displayName="ZED Framegrabber (Uncalibrated)">
-		<Description>
-			<h:p>
-				This component grabs images from a ZED device (e.g. /dev/video0) and pushes them.
-			</h:p>
-		</Description>
-		<Output>
-			<Node name="Camera" displayName="Camera" />
-			<Node name="ImagePlane" displayName="Image Plane" />
-			<Edge name="LeftOutput" source="Camera" destination="ImagePlane" displayName="Greyscale Image">
-				<Description>
-					<h:p>The camera image (greyscale).</h:p>
-				</Description>
-				<Attribute name="type" value="Image" xsi:type="EnumAttributeReferenceType"/>
-				<Attribute name="mode" value="push" xsi:type="EnumAttributeReferenceType"/>
-			</Edge>
-			<Edge name="ColorLeftOutput" source="Camera" destination="ImagePlane" displayName="Color Image">
-				<Description>
-					<h:p>The camera image (color).</h:p>
-				</Description>
-				<Attribute name="type" value="Image" xsi:type="EnumAttributeReferenceType"/>
-				<Attribute name="mode" value="push" xsi:type="EnumAttributeReferenceType"/>
-			</Edge>
-		</Output>
-
-		<DataflowConfiguration>
-			<UbitrackLib class="ZEDFrameGrabber" />
-
-			<Attribute name="timeOffset" default="0" xsi:type="IntAttributeDeclarationType" displayName="time offset">
-				<Description>
-					<h:p>Offset in ms to add to the timestamps created by the component. This is used
-					to compensate clock shift.</h:p>
-				</Description>
-			</Attribute>
-			<Attribute name="cameraName" default="" xsi:type="StringAttributeDeclarationType" displayName="camera name">
-				<Description>
-					<h:p>string that identifies the capture device in linux. Usually this is of type /dev/video0 .</h:p>
-				</Description>
-			</Attribute>
 		</DataflowConfiguration>
 	</Pattern>
 
@@ -102,6 +55,46 @@
 
 	<GlobalNodeAttributeDeclarations>
 		<xi:include href="file:GlobalAttrSpec.xml" xpointer="element(/1/1/1)" />
+
+		<Attribute name="zedCameraResolution" displayName="Sensor Resolution" default="HD2K" xsi:type="EnumAttributeDeclarationType">
+			<Description>
+				<h:p>
+					Device Camera Resolution.
+				</h:p>
+			</Description>
+			<EnumValue name="RESOLUTION_HD2K" displayName="HD2K"/>
+			<EnumValue name="RESOLUTION_HD1080" displayName="HD1080"/>
+			<EnumValue name="RESOLUTION_HD720" displayName="HD720"/>
+			<EnumValue name="RESOLUTION_VGA" displayName="VGA"/>
+
+		</Attribute>
+
+		<Attribute name="zedDepthMode" displayName="Depth Processing Mode" default="ULTRA" xsi:type="EnumAttributeDeclarationType">
+			<Description>
+				<h:p>
+					Depth Processing Mode.
+				</h:p>
+			</Description>
+
+			<EnumValue name="DEPTH_MODE_NONE" displayName="NONE"/>
+			<EnumValue name="DEPTH_MODE_PERFORMANCE" displayName="PERFORMANCE"/>
+			<EnumValue name="DEPTH_MODE_MEDIUM" displayName="MEDIUM"/>
+			<EnumValue name="DEPTH_MODE_QUALITY" displayName="QUALITY"/>
+			<EnumValue name="DEPTH_MODE_ULTRA" displayName="ULTRA"/>
+
+		</Attribute>
+
+		<Attribute name="zedSensingMode" displayName="Sensing Mode" default="STANDARD" xsi:type="EnumAttributeDeclarationType">
+			<Description>
+				<h:p>
+					Sensing Mode.
+				</h:p>
+			</Description>
+			<EnumValue name="SENSING_MODE_STANDARD" displayName="STANDARD"/>
+			<EnumValue name="SENSING_MODE_FILL" displayName="FILL"/>
+
+		</Attribute>
+
 	</GlobalNodeAttributeDeclarations>
 
 	<GlobalEdgeAttributeDeclarations>
@@ -113,6 +106,66 @@
 		<xi:include href="file:GlobalAttrSpec.xml" xpointer="element(/1/2/6)" />
 		<xi:include href="file:GlobalAttrSpec.xml" xpointer="element(/1/2/7)" />
 		<xi:include href="file:GlobalAttrSpec.xml" xpointer="element(/1/2/8)" />
+
+		<Attribute name="zedSensorType" displayName="Sensor Type" default="VIDEO" xsi:type="EnumAttributeDeclarationType">
+			<Description>
+				<h:p>
+					Sensor Type for the Stream.
+				</h:p>
+			</Description>
+
+			<EnumValue name="VIDEO" displayName="Video"/>
+			<EnumValue name="DEPTH"  displayName="Depth"/>
+		</Attribute>
+
+		<Attribute name="zedVideoSource" displayName="Video Source" default="VIEW_LEFT" xsi:type="EnumAttributeDeclarationType">
+			<Description>
+				<h:p>
+					Select Video Source.
+				</h:p>
+			</Description>
+
+			<EnumValue name="VIEW_LEFT" displayName="LEFT"/>
+			<EnumValue name="VIEW_RIGHT" displayName="RIGHT"/>
+			<EnumValue name="VIEW_LEFT_GRAY" displayName="LEFT_GRAY"/>
+			<EnumValue name="VIEW_RIGHT_GRAY" displayName="RIGHT_GRAY"/>
+			<EnumValue name="VIEW_LEFT_UNRECTIFIED" displayName="LEFT_UNRECTIFIED"/>
+			<EnumValue name="VIEW_RIGHT_UNRECTIFIED" displayName="RIGHT_UNRECTIFIED"/>
+			<EnumValue name="VIEW_LEFT_UNRECTIFIED_GRAY" displayName="LEFT_UNRECTIFIED_GRAY"/>
+			<EnumValue name="VIEW_RIGHT_UNRECTIFIED_GRAY" displayName="RIGHT_UNRECTIFIED_GRAY"/>
+			<EnumValue name="VIEW_SIDE_BY_SIDE" displayName="SIDE_BY_SIDE"/>
+			<EnumValue name="VIEW_DEPTH" displayName="DEPTH"/>
+			<EnumValue name="VIEW_CONFIDENCE" displayName="CONFIDENCE"/>
+			<EnumValue name="VIEW_NORMALS" displayName="NORMALS"/>
+			<EnumValue name="VIEW_DEPTH_RIGHT" displayName="DEPTH_RIGHT"/>
+			<EnumValue name="VIEW_NORMALS_RIGHT" displayName="NORMALS_RIGHT"/>
+		</Attribute>
+
+		<Attribute name="zedMeasureSource" displayName="Measure Source" default="MEASURE_XYZ" xsi:type="EnumAttributeDeclarationType">
+			<Description>
+				<h:p>
+					Select Measure Source.
+				</h:p>
+			</Description>
+
+			<EnumValue name="MEASURE_DISPARITY" displayName="DISPARITY"/>
+			<EnumValue name="MEASURE_DEPTH" displayName="DEPTH"/>
+			<EnumValue name="MEASURE_CONFIDENCE" displayName="CONFIDENCE"/>
+			<EnumValue name="MEASURE_XYZ" displayName="XYZ"/>
+			<EnumValue name="MEASURE_XYZRGBA" displayName="XYZRGBA"/>
+			<EnumValue name="MEASURE_XYZBGRA" displayName="XYZBGRA"/>
+			<EnumValue name="MEASURE_XYZARGB" displayName="XYZARGB"/>
+			<EnumValue name="MEASURE_XYZABGR" displayName="XYZABGR"/>
+			<EnumValue name="MEASURE_NORMALS" displayName="NORMALS"/>
+			<EnumValue name="MEASURE_DISPARITY_RIGHT" displayName="DISPARITY_RIGHT"/>
+			<EnumValue name="MEASURE_DEPTH_RIGHT" displayName="DEPTH_RIGHT"/>
+			<EnumValue name="MEASURE_XYZ_RIGHT" displayName="XYZ_RIGHT"/>
+			<EnumValue name="MEASURE_XYZRGBA_RIGHT" displayName="XYZRGBA_RIGHT"/>
+			<EnumValue name="MEASURE_XYZBGRA_RIGHT" displayName="XYZBGRA_RIGHT"/>
+			<EnumValue name="MEASURE_XYZARGB_RIGHT" displayName="XYZARGB_RIGHT"/>
+			<EnumValue name="MEASURE_XYZABGR_RIGHT" displayName="XYZABGR_RIGHT"/>
+			<EnumValue name="MEASURE_NORMALS_RIGHT" displayName="NORMALS_RIGHT"/>
+		</Attribute>
 	</GlobalEdgeAttributeDeclarations>
 
 	<GlobalDataflowAttributeDeclarations>
