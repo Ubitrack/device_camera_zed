@@ -40,6 +40,8 @@ using namespace Ubitrack::Vision;
 using namespace Ubitrack::Drivers;
 
 
+namespace Ubitrack { namespace Drivers {
+
 
 /**
 * Conversion function between sl::Mat and cv::Mat
@@ -160,13 +162,20 @@ void ZEDModule::captureThread()
         LOG4CPP_INFO(logger, "ZED Camera setup successful.");
     }
 
+    // initialize components
+    ComponentList allComponents = getAllComponents();
+
+    for (auto i = allComponents.begin(); i != allComponents.end(); ++i) {
+        (*i)->init(m_zedcamera);
+    }
+
+
     // Set runtime parameters after opening the camera
     sl::RuntimeParameters runtime_parameters;
     runtime_parameters.sensing_mode = m_sensingMode;
     runtime_parameters.enable_depth = true;
     runtime_parameters.enable_point_cloud = true;
     runtime_parameters.measure3D_reference_frame = sl::REFERENCE_FRAME_CAMERA;
-
 
     while (!m_bStop) {
 
@@ -194,10 +203,7 @@ void ZEDModule::captureThread()
             for (auto i = allComponents.begin(); i != allComponents.end(); ++i) {
                 (*i)->process(time, m_zedcamera);
             }
-
-
         }
-
     }
 
     if (m_zedcamera.isOpened()) {
@@ -215,7 +221,6 @@ void ZEDVideoComponent::init(sl::Camera &cam) {
 
 
     m_imageFormatProperties = Vision::Image::ImageFormatProperties();
-    sl::MAT_TYPE mat_type = sl::MAT_TYPE_8U_C4;
 
     switch (m_componentKey.getVideoSource()) {
         case sl::VIEW_LEFT:
@@ -228,20 +233,20 @@ void ZEDVideoComponent::init(sl::Camera &cam) {
         case sl::VIEW_CONFIDENCE:
         case sl::VIEW_NORMALS:
         case sl::VIEW_NORMALS_RIGHT:
-            mat_type = sl::MAT_TYPE_8U_C4;
+            m_mat_type = sl::MAT_TYPE_8U_C4;
 
             m_imageFormatProperties.depth = CV_8U;
             m_imageFormatProperties.channels = 4;
             m_imageFormatProperties.matType = CV_8UC4;
             m_imageFormatProperties.bitsPerPixel = 32;
             m_imageFormatProperties.origin = 0;
-            m_imageFormatProperties.imageFormat = Vision::Image::RGBA;
+            m_imageFormatProperties.imageFormat = Vision::Image::BGRA;
             break;
         case sl::VIEW_LEFT_GRAY:
         case sl::VIEW_RIGHT_GRAY:
         case sl::VIEW_LEFT_UNRECTIFIED_GRAY:
         case sl::VIEW_RIGHT_UNRECTIFIED_GRAY:
-            mat_type = sl::MAT_TYPE_8U_C1;
+            m_mat_type = sl::MAT_TYPE_8U_C1;
 
             m_imageFormatProperties.depth = CV_8U;
             m_imageFormatProperties.channels = 1;
@@ -253,9 +258,7 @@ void ZEDVideoComponent::init(sl::Camera &cam) {
         default:
             LOG4CPP_WARN(logger, "unknown sl::MAT_TYPE ");
     }
-    m_image_zed = sl::Mat(m_imageWidth, m_imageHeight, mat_type);
-//            sl::Mat point_cloud;
-
+    m_image_zed.reset(new sl::Mat(m_imageWidth, m_imageHeight, m_mat_type));
 
 }
 
@@ -263,12 +266,15 @@ void ZEDVideoComponent::init(sl::Camera &cam) {
 void ZEDVideoComponent::process(Measurement::Timestamp ts, sl::Camera &cam) {
 
     if (m_outputPort.isConnected()) {
-        cam.retrieveImage(getZEDImage(), sl::VIEW_LEFT, sl::MEM_CPU, m_imageWidth, m_imageHeight);
+
+        // we're copying twice here - once from driver to app space and then we clone the image ..
+        // should be fixed by first allocation the image and referencing the sl::Mat with allocated memory.
+        cam.retrieveImage(*m_image_zed, m_componentKey.getVideoSource(), sl::MEM_CPU, m_imageWidth, m_imageHeight);
         boost::shared_ptr <Image> pColorImage;
 
         // To share data between sl::Mat and cv::Mat, use slMat2cvMat()
         // Only the headers and pointer to the sl::Mat are copied, not the data itself
-        cv::Mat image_ref_ocv = slMat2cvMat(getZEDImage());
+        cv::Mat image_ref_ocv = slMat2cvMat(*m_image_zed);
 
         // for now we need to copy the opencv image since ref_ocv refers to a changing sl::Mat buffer
         cv::Mat image = image_ref_ocv.clone();
@@ -404,3 +410,4 @@ UBITRACK_REGISTER_COMPONENT( Dataflow::ComponentFactory* const cf ) {
 }
 
 
+} } // namespace Ubitrack::Drivers

@@ -6,16 +6,16 @@
 	xmlns:h="http://www.w3.org/1999/xhtml"
 	xsi:schemaLocation='http://ar.in.tum.de/ubitrack/utql ../../../schema/utql_templates.xsd'>
 
-	<Pattern name="ZEDFrameGrabber" displayName="ZED Framegrabber (Calibrated)">
+	<Pattern name="ZEDVideoStream" displayName="ZED VideoStream">
 		<Description>
 			<h:p>
-				This component grabs images from a ZED device (e.g. /dev/video0) and pushes them.
+				This component grabs images from a ZED device and pushes them.
 			</h:p>
 		</Description>
 		<Output>
 			<Node name="Camera" displayName="Camera" >
 				<Description><p xmlns="http://www.w3.org/1999/xhtml">ZED Camera</p></Description>
-				<Attribute name="serialNumber" value="0" xsi:type="IntAttributeReferenceType"/>
+				<Attribute name="zedSerialNumber" xsi:type="IntAttributeReferenceType"/>
 
 				<Attribute name="zedCameraResolution" xsi:type="EnumAttributeReferenceType"/>
 				<Attribute name="zedDepthMode" xsi:type="EnumAttributeReferenceType"/>
@@ -30,7 +30,7 @@
 				<Attribute name="mode" value="push" xsi:type="EnumAttributeReferenceType"/>
 
 				<Attribute name="zedSensorType" value="VIDEO" xsi:type="EnumAttributeReferenceType"/>
-				<Attribute name="zedMeasureSource" value="DEPTH" xsi:type="EnumAttributeReferenceType"/>
+				<!--<Attribute name="zedMeasureSource" value="DEPTH" xsi:type="EnumAttributeReferenceType"/>-->
 				<Attribute name="zedVideoSource" xsi:type="EnumAttributeReferenceType"/>
 			</Edge>
 		</Output>
@@ -56,7 +56,11 @@
 	<GlobalNodeAttributeDeclarations>
 		<xi:include href="file:GlobalAttrSpec.xml" xpointer="element(/1/1/1)" />
 
-		<Attribute name="zedCameraResolution" displayName="Sensor Resolution" default="HD2K" xsi:type="EnumAttributeDeclarationType">
+		<Attribute name="zedSerialNumber" displayName="ZED Serial Number" default="0" xsi:type="IntAttributeDeclarationType">
+			<Description><p xmlns="http://www.w3.org/1999/xhtml">Serial Number of the ZED Device.</p></Description>
+		</Attribute>
+
+		<Attribute name="zedCameraResolution" displayName="Sensor Resolution" default="RESOLUTION_HD2K" xsi:type="EnumAttributeDeclarationType">
 			<Description>
 				<h:p>
 					Device Camera Resolution.
@@ -69,7 +73,7 @@
 
 		</Attribute>
 
-		<Attribute name="zedDepthMode" displayName="Depth Processing Mode" default="ULTRA" xsi:type="EnumAttributeDeclarationType">
+		<Attribute name="zedDepthMode" displayName="Depth Processing Mode" default="DEPTH_MODE_ULTRA" xsi:type="EnumAttributeDeclarationType">
 			<Description>
 				<h:p>
 					Depth Processing Mode.
@@ -84,7 +88,7 @@
 
 		</Attribute>
 
-		<Attribute name="zedSensingMode" displayName="Sensing Mode" default="STANDARD" xsi:type="EnumAttributeDeclarationType">
+		<Attribute name="zedSensingMode" displayName="Sensing Mode" default="SENSING_MODE_STANDARD" xsi:type="EnumAttributeDeclarationType">
 			<Description>
 				<h:p>
 					Sensing Mode.
@@ -107,7 +111,7 @@
 		<xi:include href="file:GlobalAttrSpec.xml" xpointer="element(/1/2/7)" />
 		<xi:include href="file:GlobalAttrSpec.xml" xpointer="element(/1/2/8)" />
 
-		<Attribute name="zedSensorType" displayName="Sensor Type" default="VIDEO" xsi:type="EnumAttributeDeclarationType">
+		<Attribute name="zedSensorType" displayName="Sensor Type" constant="true" default="VIDEO" xsi:type="EnumAttributeDeclarationType">
 			<Description>
 				<h:p>
 					Sensor Type for the Stream.
@@ -141,7 +145,7 @@
 			<EnumValue name="VIEW_NORMALS_RIGHT" displayName="NORMALS_RIGHT"/>
 		</Attribute>
 
-		<Attribute name="zedMeasureSource" displayName="Measure Source" default="MEASURE_XYZ" xsi:type="EnumAttributeDeclarationType">
+		<Attribute name="zedMeasureSource" displayName="Measure Source" constant="true" default="MEASURE_XYZ" xsi:type="EnumAttributeDeclarationType">
 			<Description>
 				<h:p>
 					Select Measure Source.

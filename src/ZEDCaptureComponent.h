@@ -42,6 +42,7 @@
 #include <cstdlib>
 
 #include <iostream>
+#include <memory>
 #include <map>
 #include <boost/array.hpp>
 #include <boost/utility.hpp>
@@ -187,7 +188,7 @@ namespace Ubitrack { namespace Drivers {
  * Module key for art.
  * Represents the port number on which to listen.
  */
-        MAKE_NODEATTRIBUTEKEY_DEFAULT( ZEDModuleKey, int, "Camera", "serialNumber", 0 );
+        MAKE_NODEATTRIBUTEKEY_DEFAULT( ZEDModuleKey, int, "Camera", "zedSerialNumber", 0 );
 
 /**
  * Component key for flycapture.
@@ -310,8 +311,8 @@ namespace Ubitrack { namespace Drivers {
                     config->getAttributeData("cameraFrameRate", m_cameraFrameRate);
                 }
 
-                if (config->hasAttribute("serialNumber")) {
-                    config->getAttributeData("serialNumber", m_serialNumber);
+                if (config->hasAttribute("zedSerialNumber")) {
+                    config->getAttributeData("zedSerialNumber", m_serialNumber);
                 }
 
                 if (config->hasAttribute("zedCameraResolution")) {
@@ -337,7 +338,7 @@ namespace Ubitrack { namespace Drivers {
             }
 
             /** destructor */
-            virtual ~ZEDModule();
+            virtual ~ZEDModule() {};
 
             virtual void startModule();
 
@@ -417,6 +418,7 @@ namespace Ubitrack { namespace Drivers {
                           const ZEDComponentKey& componentKey, ZEDModule* pModule )
                     : ZEDComponent(name, subgraph, componentKey, pModule)
                     , m_outputPort("ImageOutput", *this)
+                    , m_mat_type(sl::MAT_TYPE_8U_C4)
                     , m_imageWidth(0)
                     , m_imageHeight(0)
                     , m_autoGPUUpload( false )
@@ -448,11 +450,8 @@ namespace Ubitrack { namespace Drivers {
             unsigned int m_imageWidth;
             unsigned int m_imageHeight;
 
-            sl::Mat& getZEDImage() {
-                return m_image_zed;
-            };
-
-            sl::Mat m_image_zed;
+            sl::MAT_TYPE m_mat_type;
+            std::unique_ptr<sl::Mat> m_image_zed;
             Vision::Image::ImageFormatProperties m_imageFormatProperties;
             bool m_autoGPUUpload;
 
