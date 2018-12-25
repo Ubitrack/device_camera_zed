@@ -74,7 +74,8 @@ namespace {
 
 
     enum ZEDSensorType {
-        ZED_SENSOR_VIDEO = 0,
+        ZED_SENSOR_CONFIG = 0,
+        ZED_SENSOR_VIDEO,
         ZED_SENSOR_DEPTH,
         ZED_SENSOR_TRACKING,
         ZED_SENSOR_MAPPING
@@ -84,6 +85,7 @@ namespace {
     class ZEDSensorTypeMap : public std::map<std::string, ZEDSensorType > {
     public:
         ZEDSensorTypeMap() {
+            (*this)["CONFIG"] = ZED_SENSOR_CONFIG;
             (*this)["VIDEO"] = ZED_SENSOR_VIDEO;
             (*this)["DEPTH"] = ZED_SENSOR_DEPTH;
             (*this)["TRACKING"] = ZED_SENSOR_TRACKING;
@@ -203,15 +205,20 @@ namespace Ubitrack { namespace Drivers {
             , m_measure_source ( sl::MEASURE_XYZRGBA ) {
                 Graph::UTQLSubgraph::EdgePtr config;
 
-                if (subgraph->hasEdge("ImageOutput"))
-                    config = subgraph->getEdge("ImageOutput");
-                else if (subgraph->hasEdge("MeasureOutput"))
-                    config = subgraph->getEdge("MeasureOutput");
+                if (subgraph->m_DataflowClass == "ZEDCameraCalibration") {
+                    m_sensor_type = ZED_SENSOR_CONFIG;
+                    return;
+                } else if (subgraph->m_DataflowClass == "ZEDVideoStream") {
+                    m_sensor_type = ZED_SENSOR_VIDEO;
+                    if (subgraph->hasEdge("ImageOutput"))
+                        config = subgraph->getEdge("ImageOutput");
+                } else   {
+                    UBITRACK_THROW("ZED Camera Invalid Component Sensor Type.");
+                }
 
                 if (!config) {
                     UBITRACK_THROW("ZEDComponent Pattern has neither \"ImageOutput\" nor \"MeasureOutput\" edge");
                 }
-
 
                 if (config->hasAttribute("zedSensorType")) {
                     std::string sSensorType = config->getAttributeString("zedSensorType");
@@ -457,6 +464,72 @@ namespace Ubitrack { namespace Drivers {
 
 
         };
+
+        class ZEDCameraCalibrationComponent : public ZEDComponent {
+        public:
+            /** constructor */
+            ZEDCameraCalibrationComponent( const std::string& name, boost::shared_ptr< Graph::UTQLSubgraph > subgraph,
+                                 const ZEDComponentKey& componentKey, ZEDModule* pModule )
+                    : ZEDComponent(name, subgraph, componentKey, pModule)
+                    , m_leftIntrinsicsMatrixPort("LeftIntrinsics", *this, boost::bind(&ZEDCameraCalibrationComponent::getLeftIntrinsic, this, _1))
+                    , m_leftCameraIntrinsicsPort("LeftCameraModel", *this, boost::bind(&ZEDCameraCalibrationComponent::getLeftCameraModel, this, _1))
+                    , m_rightIntrinsicsMatrixPort("RightIntrinsics", *this, boost::bind(&ZEDCameraCalibrationComponent::getRightIntrinsic, this, _1))
+                    , m_rightCameraIntrinsicsPort("RightCameraModel", *this, boost::bind(&ZEDCameraCalibrationComponent::getRightCameraModel, this, _1))
+                    , m_leftToRightTransformPort("LeftToRightTransform", *this, boost::bind(&ZEDCameraCalibrationComponent::getLeftToRightTransform, this, _1))
+            {
+
+
+            }
+
+            /** initialize component **/
+            virtual void init(sl::Camera &cam);
+
+            /** process data - nothing to do here ..**/
+            virtual void process(Measurement::Timestamp ts, sl::Camera &cam) {};
+
+
+            /** destructor */
+            virtual ~ZEDCameraCalibrationComponent() {};
+
+        protected:
+
+            /** handler method for incoming pull requests */
+            Measurement::Matrix3x3 getLeftIntrinsic(Measurement::Timestamp t)
+            {
+                return Measurement::Matrix3x3(t, m_leftCameraIntrinsics.matrix);
+            }
+
+            Measurement::CameraIntrinsics getLeftCameraModel(Measurement::Timestamp t)
+            {
+                return Measurement::CameraIntrinsics(t, m_leftCameraIntrinsics);
+            }
+
+            Measurement::Matrix3x3 getRightIntrinsic(Measurement::Timestamp t)
+            {
+                return Measurement::Matrix3x3(t, m_rightCameraIntrinsics.matrix);
+            }
+
+            Measurement::CameraIntrinsics getRightCameraModel(Measurement::Timestamp t)
+            {
+                return Measurement::CameraIntrinsics(t, m_rightCameraIntrinsics);
+            }
+
+            Measurement::Pose getLeftToRightTransform(Measurement::Timestamp t)
+            {
+                return Measurement::Pose(t, m_leftToRightTransform);
+            }
+
+            Dataflow::PullSupplier <Measurement::CameraIntrinsics> m_leftCameraIntrinsicsPort;
+            Dataflow::PullSupplier <Measurement::Matrix3x3> m_leftIntrinsicsMatrixPort;
+            Dataflow::PullSupplier <Measurement::CameraIntrinsics> m_rightCameraIntrinsicsPort;
+            Dataflow::PullSupplier <Measurement::Matrix3x3> m_rightIntrinsicsMatrixPort;
+            Dataflow::PullSupplier <Measurement::Pose> m_leftToRightTransformPort;
+
+            Math::CameraIntrinsics<double> m_leftCameraIntrinsics;
+            Math::CameraIntrinsics<double> m_rightCameraIntrinsics;
+            Math::Pose m_leftToRightTransform;
+        };
+
 
         class ZEDMeasureComponent : public ZEDComponent {
         public:

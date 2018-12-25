@@ -51,6 +51,71 @@
 		</DataflowConfiguration>
 	</Pattern>
 
+	<Pattern name="ZEDCameraCalibration" displayName="ZED Camera Calibration">
+		<Description>
+			<h:p>
+				This component provides access to the ZED Camera Calibration.
+			</h:p>
+		</Description>
+		<Output>
+			<Node name="Camera" displayName="Left Camera" >
+				<Description><p xmlns="http://www.w3.org/1999/xhtml">ZED Left Camera</p></Description>
+				<Attribute name="zedSerialNumber" xsi:type="IntAttributeReferenceType"/>
+
+				<Attribute name="zedCameraResolution" xsi:type="EnumAttributeReferenceType"/>
+				<Attribute name="zedDepthMode" xsi:type="EnumAttributeReferenceType"/>
+				<Attribute name="zedSensingMode" xsi:type="EnumAttributeReferenceType"/>
+			</Node>
+			<Node name="CameraRight" displayName="Right Camera" >
+				<Description><p xmlns="http://www.w3.org/1999/xhtml">ZED Right Camera</p></Description>
+			</Node>
+			<Node name="ImagePlaneLeft" displayName="Image Plane Left" />
+			<Node name="ImagePlaneRight" displayName="Image Plane Right" />
+
+			<Edge name="LeftIntrinsics" source="Camera" destination="ImagePlaneLeft" displayName="Camera Intrinsics Left">
+				<Description>
+					<h:p>The intrinsic camera matrix left.</h:p>
+				</Description>
+				<Attribute name="type" value="3x3Matrix" xsi:type="EnumAttributeReferenceType"/>
+				<Attribute name="mode" value="pull" xsi:type="EnumAttributeReferenceType"/>
+			</Edge>
+			<Edge name="LeftCameraModel" source="Camera"    destination="ImagePlaneLeft" displayName="Camera Model Left">
+				<Description>
+					<h:p>The camera model left.</h:p>
+				</Description>
+				<Attribute name="type" value="Intrinsics" xsi:type="EnumAttributeReferenceType"/>
+				<Attribute name="mode" value="pull" xsi:type="EnumAttributeReferenceType"/>
+			</Edge>
+			<Edge name="RightIntrinsics" source="CameraRight" destination="ImagePlaneRight" displayName="Camera Intrinsics Right">
+				<Description>
+					<h:p>The intrinsic camera matrix right.</h:p>
+				</Description>
+				<Attribute name="type" value="3x3Matrix" xsi:type="EnumAttributeReferenceType"/>
+				<Attribute name="mode" value="pull" xsi:type="EnumAttributeReferenceType"/>
+			</Edge>
+			<Edge name="RightCameraModel" source="CameraRight"    destination="ImagePlaneRight" displayName="Camera Model Right">
+				<Description>
+					<h:p>The camera model right.</h:p>
+				</Description>
+				<Attribute name="type" value="Intrinsics" xsi:type="EnumAttributeReferenceType"/>
+				<Attribute name="mode" value="pull" xsi:type="EnumAttributeReferenceType"/>
+			</Edge>
+			<Edge name="LeftToRightTransform" source="Camera" destination="CameraRight" displayName="Camera Left To Right Transform">
+				<Description>
+					<h:p>The left camera to right camera transform.</h:p>
+				</Description>
+				<Attribute name="type" value="6D" xsi:type="EnumAttributeReferenceType"/>
+				<Attribute name="mode" value="pull" xsi:type="EnumAttributeReferenceType"/>
+			</Edge>
+		</Output>
+
+		<DataflowConfiguration>
+			<UbitrackLib class="ZEDCameraCalibration" />
+
+		</DataflowConfiguration>
+	</Pattern>
+
+
 	<!-- Attribute declarations -->
 
 	<GlobalNodeAttributeDeclarations>
@@ -118,6 +183,7 @@
 				</h:p>
 			</Description>
 
+			<EnumValue name="CONFIG" displayName="Config"/>
 			<EnumValue name="VIDEO" displayName="Video"/>
 			<EnumValue name="DEPTH"  displayName="Depth"/>
 		</Attribute>

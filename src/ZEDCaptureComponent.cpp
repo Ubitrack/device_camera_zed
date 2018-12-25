@@ -83,6 +83,40 @@ cv::Mat slMat2cvMat(sl::Mat &input) {
     return cv::Mat(input.getHeight(), input.getWidth(), cv_type, input.getPtr<sl::uchar1>(sl::MEM_CPU));
 }
 
+Math::Quaternion slRotation2utQuaternion(sl::Rotation &input) {
+    // Convert rotation sl::Rotation into Math::Quaternion
+    sl::Orientation sl_orn(input);
+    Math::Quaternion ut_quat((double)sl_orn[0], (double)sl_orn[1], (double)sl_orn[2], (double)sl_orn[3]);
+    return ut_quat;
+}
+
+Math::CameraIntrinsics<double> slCameraParameters2utCameraIntrinsics(sl::CameraParameters &input) {
+    // Convert camera calibration sl::CameraParameters into Math::CameraIntrinsics
+
+    LOG4CPP_INFO(logger, "ZED Instrinsics hfov: " << input.h_fov << " vfov: " << input.v_fov
+            << " fx: " << input.fx << " fy: " << input.fy
+            << " cx: " << input.cx << " cy: " << input.cy
+            << " width: " << input.image_size.width << " height: " << input.image_size.height);
+
+    Math::Matrix< double, 3, 3 > intrinsicMatrix = Math::Matrix3x3d::identity();
+    intrinsicMatrix(0, 0) = input.fx;
+    intrinsicMatrix(1, 1) = input.fy;
+    intrinsicMatrix(0, 2) = -input.cx;
+    intrinsicMatrix(1, 2) = -input.cy;
+    intrinsicMatrix(2, 2) = -1.0;
+
+    // [ k1, k2, p1, p2, k3 ]
+    Math::Vector< double, 3 > radial(input.disto[0], input.disto[1], input.disto[4]);
+    Math::Vector< double, 2 > tangential(input.disto[2], input.disto[3]);
+    std::size_t width = input.image_size.width;
+    std::size_t height = input.image_size.height;
+
+
+    Math::CameraIntrinsics<double> ut_intr(intrinsicMatrix, radial, tangential, width, height);
+    return ut_intr;
+}
+
+
 void ZEDModule::startModule()
 {
     if ( !m_running )
@@ -127,8 +161,8 @@ boost::shared_ptr< ZEDComponent > ZEDModule::createComponent( const std::string&
 
     if ( type == "ZEDVideoStream" )
         return boost::shared_ptr< ZEDComponent >( new ZEDVideoComponent( name, subgraph, key, pModule ) );
-//    else if ( type == "ZEDMeasureStream" )
-//        return boost::shared_ptr< ZEDComponent >( new ZEDMeasureComponent( name, subgraph, key, pModule ) );
+    else if ( type == "ZEDCameraCalibration" )
+        return boost::shared_ptr< ZEDComponent >( new ZEDCameraCalibrationComponent( name, subgraph, key, pModule ) );
 
     UBITRACK_THROW( "Class " + type + " not supported by ZED module" );
 }
@@ -297,6 +331,31 @@ void ZEDVideoComponent::process(Measurement::Timestamp ts, sl::Camera &cam) {
 }
 
 
+
+void ZEDCameraCalibrationComponent::init(sl::Camera &cam) {
+
+    sl::CameraInformation zed_camera_info = cam.getCameraInformation();
+    sl::CalibrationParameters zed_camera_calibration = zed_camera_info.calibration_parameters;
+
+    // convert left-to-right transform to ubitrack
+    sl::Rotation zed_lr_rot;
+    zed_lr_rot.setRotationVector(zed_camera_calibration.R);
+
+    Math::Quaternion lr_orn = slRotation2utQuaternion(zed_lr_rot);
+    Math::Vector3d lr_trn(
+            (double)zed_camera_calibration.T[0],
+            (double)zed_camera_calibration.T[1],
+            (double)zed_camera_calibration.T[2]
+            );
+
+    m_leftToRightTransform = Math::Pose(lr_orn, lr_trn);
+
+    m_leftCameraIntrinsics = slCameraParameters2utCameraIntrinsics(zed_camera_calibration.left_cam);
+    m_rightCameraIntrinsics = slCameraParameters2utCameraIntrinsics(zed_camera_calibration.right_cam);
+
+}
+
+
 void ZEDMeasureComponent::init(sl::Camera &cam) {
 //
 //    // Prepare new image size to retrieve half-resolution images
@@ -403,8 +462,8 @@ std::ostream& operator<<( std::ostream& s, const ZEDComponentKey& k )
 UBITRACK_REGISTER_COMPONENT( Dataflow::ComponentFactory* const cf ) {
     std::vector< std::string > moduleComponents;
     moduleComponents.emplace_back( "ZEDVideoStream" );
-//    moduleComponents.emplace_back( "ZEDPointCloudStream" );
-//    moduleComponents.emplace_back( "ZEDCameraIntrinsics" );
+    moduleComponents.emplace_back( "ZEDCameraCalibration" );
+//    moduleComponents.emplace_back( "..." );
 
     cf->registerModule< Ubitrack::Drivers::ZEDModule > ( moduleComponents );
 }
