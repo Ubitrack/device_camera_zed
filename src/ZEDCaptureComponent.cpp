@@ -163,6 +163,8 @@ boost::shared_ptr< ZEDComponent > ZEDModule::createComponent( const std::string&
         return boost::shared_ptr< ZEDComponent >( new ZEDVideoComponent( name, subgraph, key, pModule ) );
     else if ( type == "ZEDCameraCalibration" )
         return boost::shared_ptr< ZEDComponent >( new ZEDCameraCalibrationComponent( name, subgraph, key, pModule ) );
+    else if ( type == "ZEDPointCloud" )
+        return boost::shared_ptr< ZEDComponent >( new ZEDPointCloudComponent( name, subgraph, key, pModule ) );
 
     UBITRACK_THROW( "Class " + type + " not supported by ZED module" );
 }
@@ -248,7 +250,6 @@ void ZEDModule::captureThread()
 
 void ZEDVideoComponent::init(sl::Camera &cam) {
 
-    // Prepare new image size to retrieve half-resolution images
     sl::Resolution image_size = cam.getResolution();
     m_imageWidth = image_size.width;
     m_imageHeight = image_size.height;
@@ -303,7 +304,10 @@ void ZEDVideoComponent::process(Measurement::Timestamp ts, sl::Camera &cam) {
 
         // we're copying twice here - once from driver to app space and then we clone the image ..
         // should be fixed by first allocation the image and referencing the sl::Mat with allocated memory.
-        cam.retrieveImage(*m_image_zed, m_componentKey.getVideoSource(), sl::MEM_CPU, m_imageWidth, m_imageHeight);
+        sl::ERROR_CODE err = cam.retrieveImage(*m_image_zed, m_componentKey.getVideoSource(), sl::MEM_CPU, m_imageWidth, m_imageHeight);
+        if (err != sl::SUCCESS) {
+            LOG4CPP_WARN(logger, "Error while grabbing frame: " << sl::toString(err));
+        }
         boost::shared_ptr <Image> pColorImage;
 
         // To share data between sl::Mat and cv::Mat, use slMat2cvMat()
@@ -356,95 +360,84 @@ void ZEDCameraCalibrationComponent::init(sl::Camera &cam) {
 }
 
 
-void ZEDMeasureComponent::init(sl::Camera &cam) {
+void ZEDPointCloudComponent::init(sl::Camera &cam) {
 //
-//    // Prepare new image size to retrieve half-resolution images
-//    sl::Resolution image_size = cam.getResolution();
-//    m_imageWidth = image_size.width;
-//    m_imageHeight = image_size.height;
-//
-//
-//    m_imageFormatProperties = Vision::Image::ImageFormatProperties();
-//    sl::MAT_TYPE mat_type = sl::MAT_TYPE_8U_C4;
-//
-//    switch (m_componentKey.getVideoSource()) {
-//        case sl::VIEW_LEFT:
-//        case sl::VIEW_RIGHT:
-//        case sl::VIEW_LEFT_UNRECTIFIED:
-//        case sl::VIEW_RIGHT_UNRECTIFIED:
-//        case sl::VIEW_SIDE_BY_SIDE:
-//        case sl::VIEW_DEPTH:
-//        case sl::VIEW_DEPTH_RIGHT:
-//        case sl::VIEW_CONFIDENCE:
-//        case sl::VIEW_NORMALS:
-//        case sl::VIEW_NORMALS_RIGHT:
-//            mat_type = sl::MAT_TYPE_8U_C4;
-//
-//            m_imageFormatProperties.depth = CV_8U;
-//            m_imageFormatProperties.channels = 4;
-//            m_imageFormatProperties.matType = CV_8UC4;
-//            m_imageFormatProperties.bitsPerPixel = 32;
-//            m_imageFormatProperties.origin = 0;
-//            m_imageFormatProperties.imageFormat = Vision::Image::RGBA;
-//            break;
-//        case sl::VIEW_LEFT_GRAY:
-//        case sl::VIEW_RIGHT_GRAY:
-//        case sl::VIEW_LEFT_UNRECTIFIED_GRAY:
-//        case sl::VIEW_RIGHT_UNRECTIFIED_GRAY:
-//            mat_type = sl::MAT_TYPE_8U_C1;
-//
-//            m_imageFormatProperties.depth = CV_8U;
-//            m_imageFormatProperties.channels = 1;
-//            m_imageFormatProperties.matType = CV_8UC1;
-//            m_imageFormatProperties.bitsPerPixel = 8;
-//            m_imageFormatProperties.origin = 0;
-//            m_imageFormatProperties.imageFormat = Vision::Image::LUMINANCE;
-//            break;
-//        default:
-//        LOG4CPP_WARN(logger, "unknown sl::MAT_TYPE ");
-//    }
-//    m_image_zed = sl::Mat(m_imageWidth, m_imageHeight, mat_type);
-////            sl::Mat point_cloud;
+    sl::Resolution image_size = cam.getResolution();
+    m_imageWidth = image_size.width;
+    m_imageHeight = image_size.height;
+    m_numberPoints = image_size.area();
 
+    switch (m_componentKey.getMeasureSource()) {
+        case sl::MEASURE_DISPARITY: /**< Disparity map. Each pixel contains 1 float. sl::MAT_TYPE_32F_C1.*/
+        case sl::MEASURE_DISPARITY_RIGHT: /**< Disparity map for right sensor. Each pixel contains 1 float. sl::MAT_TYPE_32F_C1.*/
+        case sl::MEASURE_DEPTH: /**< Depth map. Each pixel contains 1 float. sl::MAT_TYPE_32F_C1.*/
+        case sl::MEASURE_DEPTH_RIGHT: /**< Depth map for right sensor. Each pixel contains 1 float. sl::MAT_TYPE_32F_C1.*/
+        case sl::MEASURE_CONFIDENCE: /**< Certainty/confidence of the depth map. Each pixel contains 1 float. sl::MAT_TYPE_32F_C1.*/
+            m_mat_type = sl::MAT_TYPE_32F_C1;
+
+            break;
+
+        case sl::MEASURE_XYZ: /**< Point cloud. Each pixel contains 4 float (X, Y, Z, not used). sl::MAT_TYPE_32F_C4.*/
+        case sl::MEASURE_XYZRGBA: /**< Colored point cloud. Each pixel contains 4 float (X, Y, Z, color). The color need to be read as an usigned char[4] representing the RGBA color.  sl::MAT_TYPE_32F_C4.*/
+        case sl::MEASURE_XYZBGRA: /**< Colored point cloud. Each pixel contains 4 float (X, Y, Z, color). The color need to be read as an usigned char[4] representing the BGRA color.  sl::MAT_TYPE_32F_C4.*/
+        case sl::MEASURE_XYZARGB: /**< Colored point cloud. Each pixel contains 4 float (X, Y, Z, color). The color need to be read as an usigned char[4] representing the ARGB color.  sl::MAT_TYPE_32F_C4.*/
+        case sl::MEASURE_XYZABGR: /**< Colored point cloud. Each pixel contains 4 float (X, Y, Z, color). The color need to be read as an usigned char[4] representing the ABGR color.  sl::MAT_TYPE_32F_C4.*/
+        case sl::MEASURE_NORMALS: /**< Normals vector. Each pixel contains 4 float (X, Y, Z, 0).  sl::MAT_TYPE_32F_C4.*/
+        case sl::MEASURE_XYZ_RIGHT: /**< Point cloud for right sensor. Each pixel contains 4 float (X, Y, Z, not used). sl::MAT_TYPE_32F_C4.*/
+        case sl::MEASURE_XYZRGBA_RIGHT: /**< Colored point cloud for right sensor. Each pixel contains 4 float (X, Y, Z, color). The color need to be read as an usigned char[4] representing the RGBA color. sl::MAT_TYPE_32F_C4.*/
+        case sl::MEASURE_XYZBGRA_RIGHT: /**< Colored point cloud for right sensor. Each pixel contains 4 float (X, Y, Z, color). The color need to be read as an usigned char[4] representing the BGRA color. sl::MAT_TYPE_32F_C4.*/
+        case sl::MEASURE_XYZARGB_RIGHT: /**< Colored point cloud for right sensor. Each pixel contains 4 float (X, Y, Z, color). The color need to be read as an usigned char[4] representing the ARGB color. sl::MAT_TYPE_32F_C4.*/
+        case sl::MEASURE_XYZABGR_RIGHT: /**< Colored point cloud for right sensor. Each pixel contains 4 float (X, Y, Z, color). The color need to be read as an usigned char[4] representing the ABGR color. sl::MAT_TYPE_32F_C4.*/
+        case sl::MEASURE_NORMALS_RIGHT: /**< Normals vector for right view. Each pixel contains 4 float (X, Y, Z, 0).  sl::MAT_TYPE_32F_C4.*/
+            m_mat_type = sl::MAT_TYPE_32F_C4;
+
+            break;
+
+        default:
+        LOG4CPP_WARN(logger, "unknown sl::MAT_TYPE ");
+    }
+
+    m_pointcloud_zed.reset(new sl::Mat(m_imageWidth, m_imageHeight, m_mat_type));
 
 }
 
 
-void ZEDMeasureComponent::process(Measurement::Timestamp ts, sl::Camera &cam) {
-//
-//    if (m_outputPort.isConnected()) {
-//
-//// Retrieve the point cloud
-//// To learn how to manipulate and display point clouds, see Depth Sensing sample
-////                    m_zedcamera.retrieveMeasure(point_cloud, sl::MEASURE_XYZ, sl::MEM_CPU, new_width, new_height);
-////                    LOG4CPP_WARN(logger, "pcl channels: " << point_cloud.getChannels() << " height: " << point_cloud.getHeight()
-////                    << " width: " << point_cloud.getWidth() << " bytes: " << point_cloud.getPixelBytes() );
-//
-//        cam.retrieveImage(getZEDImage(), sl::VIEW_LEFT, sl::MEM_CPU, m_imageWidth, m_imageHeight);
-//        boost::shared_ptr <Image> pColorImage;
-//
-//        // To share data between sl::Mat and cv::Mat, use slMat2cvMat()
-//        // Only the headers and pointer to the sl::Mat are copied, not the data itself
-//        cv::Mat image_ref_ocv = slMat2cvMat(getZEDImage());
-//
-//        // for now we need to copy the opencv image since ref_ocv refers to a changing sl::Mat buffer
-//        cv::Mat image = image_ref_ocv.clone();
-//
-//        pColorImage.reset(new Image(image));
-//        pColorImage->set_origin(m_imageFormatProperties.origin);
-//        pColorImage->set_pixelFormat(m_imageFormatProperties.imageFormat);
-//
-//        if (m_autoGPUUpload) {
-//            Vision::OpenCLManager &oclManager = Vision::OpenCLManager::singleton();
-//            if (oclManager.isInitialized()) {
-//                //force upload to the GPU
-//                pColorImage->uMat();
-//            }
-//        }
-//
-//        m_outputPort.send(Measurement::ImageMeasurement(ts, pColorImage));
-//    }
+void ZEDPointCloudComponent::process(Measurement::Timestamp ts, sl::Camera &cam) {
 
+
+    if (m_outputPort.isConnected()) {
+
+        // we're copying twice here - once from driver to app space and then we clone the image ..
+        // should be fixed by first allocation the image and referencing the sl::Mat with allocated memory.
+        sl::ERROR_CODE err = cam.retrieveMeasure(*m_pointcloud_zed, m_componentKey.getMeasureSource(), sl::MEM_CPU, m_imageWidth, m_imageHeight);
+        if (err != sl::SUCCESS) {
+            LOG4CPP_WARN(logger, "Error while grabbing frame: " << sl::toString(err));
+        }
+
+        Math::Vector3d init_pos(0, 0, 0);
+        boost::shared_ptr < std::vector<Math::Vector3d> > pPointCloud = boost::make_shared< std::vector<Math::Vector3d> >(m_numberPoints, init_pos);
+
+
+        auto *p_data_cloud = m_pointcloud_zed->getPtr<float>();
+        int index = 0;
+
+        for (size_t i = 0; i < m_numberPoints; i++) {
+            float X = p_data_cloud[index];
+            Math::Vector3d& p = pPointCloud->at(i);
+
+            if (!isValidMeasure(X)) // Checking if it's a valid point
+                p[0] = p[1] = p[2] = 0.;
+            else {
+                p[0] = X;
+                p[1] = p_data_cloud[index + 1];
+                p[2] = p_data_cloud[index + 2];
+                // ignore: p_data_cloud[index + 3] - contains rgba 8UC3 as 32bit-float
+            }
+            index += 4;
+        }
+
+        m_outputPort.send(Measurement::PositionList(ts, pPointCloud));
+    }
 }
 
 
@@ -463,7 +456,7 @@ UBITRACK_REGISTER_COMPONENT( Dataflow::ComponentFactory* const cf ) {
     std::vector< std::string > moduleComponents;
     moduleComponents.emplace_back( "ZEDVideoStream" );
     moduleComponents.emplace_back( "ZEDCameraCalibration" );
-//    moduleComponents.emplace_back( "..." );
+    moduleComponents.emplace_back( "ZEDPointCloud" );
 
     cf->registerModule< Ubitrack::Drivers::ZEDModule > ( moduleComponents );
 }

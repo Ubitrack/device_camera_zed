@@ -212,6 +212,10 @@ namespace Ubitrack { namespace Drivers {
                     m_sensor_type = ZED_SENSOR_VIDEO;
                     if (subgraph->hasEdge("ImageOutput"))
                         config = subgraph->getEdge("ImageOutput");
+                } else if (subgraph->m_DataflowClass == "ZEDPointCloud") {
+                    m_sensor_type = ZED_SENSOR_DEPTH;
+                    if (subgraph->hasEdge("PointCloudOutput"))
+                        config = subgraph->getEdge("PointCloudOutput");
                 } else   {
                     UBITRACK_THROW("ZED Camera Invalid Component Sensor Type.");
                 }
@@ -531,14 +535,22 @@ namespace Ubitrack { namespace Drivers {
         };
 
 
-        class ZEDMeasureComponent : public ZEDComponent {
+        class ZEDPointCloudComponent : public ZEDComponent {
         public:
             /** constructor */
-            ZEDMeasureComponent( const std::string& name, boost::shared_ptr< Graph::UTQLSubgraph > subgraph,
+            ZEDPointCloudComponent( const std::string& name, boost::shared_ptr< Graph::UTQLSubgraph > subgraph,
                                const ZEDComponentKey& componentKey, ZEDModule* pModule )
                     : ZEDComponent(name, subgraph, componentKey, pModule)
+                    , m_outputPort("PointCloudOutput", *this)
+                    , m_mat_type(sl::MAT_TYPE_32F_C4)
+                    , m_imageWidth(0)
+                    , m_imageHeight(0)
+                    , m_numberPoints(0)
             {
 
+                if (componentKey.getMeasureSource() != sl::MEASURE_XYZ) {
+                    UBITRACK_THROW("This component requires MeasureSource: MEASURE_XYZ");
+                }
 
             }
 
@@ -548,9 +560,17 @@ namespace Ubitrack { namespace Drivers {
             /** process data **/
             virtual void process(Measurement::Timestamp ts, sl::Camera &cam);
 
-
             /** destructor */
-            virtual ~ZEDMeasureComponent() {};
+            virtual ~ZEDPointCloudComponent() {};
+        protected:
+            Dataflow::PushSupplier <Measurement::PositionList> m_outputPort;
+
+            unsigned int m_imageWidth;
+            unsigned int m_imageHeight;
+            unsigned int m_numberPoints;
+
+            sl::MAT_TYPE m_mat_type;
+            std::unique_ptr<sl::Mat> m_pointcloud_zed;
 
         };
 

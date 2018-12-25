@@ -30,7 +30,6 @@
 				<Attribute name="mode" value="push" xsi:type="EnumAttributeReferenceType"/>
 
 				<Attribute name="zedSensorType" value="VIDEO" xsi:type="EnumAttributeReferenceType"/>
-				<!--<Attribute name="zedMeasureSource" value="DEPTH" xsi:type="EnumAttributeReferenceType"/>-->
 				<Attribute name="zedVideoSource" xsi:type="EnumAttributeReferenceType"/>
 			</Edge>
 		</Output>
@@ -111,6 +110,40 @@
 
 		<DataflowConfiguration>
 			<UbitrackLib class="ZEDCameraCalibration" />
+
+		</DataflowConfiguration>
+	</Pattern>
+
+	<Pattern name="ZEDPointCloud" displayName="ZED Point Cloud">
+		<Description>
+			<h:p>
+				This component retrieves the 3D Pointcloud from a ZED device and pushes them.
+			</h:p>
+		</Description>
+		<Output>
+			<Node name="Camera" displayName="Camera" >
+				<Description><p xmlns="http://www.w3.org/1999/xhtml">ZED Camera</p></Description>
+				<Attribute name="zedSerialNumber" xsi:type="IntAttributeReferenceType"/>
+
+				<Attribute name="zedCameraResolution" xsi:type="EnumAttributeReferenceType"/>
+				<Attribute name="zedDepthMode" xsi:type="EnumAttributeReferenceType"/>
+				<Attribute name="zedSensingMode" xsi:type="EnumAttributeReferenceType"/>
+			</Node>
+			<Node name="PointCloud" displayName="3D Point Cloud" />
+			<Edge name="PointCloudOutput" source="Camera" destination="PointCloud" displayName="Output PointCloud">
+				<Description>
+					<h:p>The output point cloud.</h:p>
+				</Description>
+				<Attribute name="type" value="3DPositionList" xsi:type="EnumAttributeReferenceType"/>
+				<Attribute name="mode" value="push" xsi:type="EnumAttributeReferenceType"/>
+
+				<Attribute name="zedSensorType" value="VIDEO" xsi:type="EnumAttributeReferenceType"/>
+				<Attribute name="zedMeasureSource" value="MEASURE_XYZ" xsi:type="EnumAttributeReferenceType"/>
+			</Edge>
+		</Output>
+
+		<DataflowConfiguration>
+			<UbitrackLib class="ZEDPointCloud" />
 
 		</DataflowConfiguration>
 	</Pattern>
