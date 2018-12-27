@@ -128,7 +128,7 @@ sl::Mat cvMat2slMat(cv::Mat &input) {
     // Mapping between sl::MAT_TYPE and CV_TYPE
     sl::MAT_TYPE mat_type = cvMatType2slMatType(input.type());
     // cv::Mat and sl::Mat will share a single memory structure
-    return sl::Mat(input.rows, input.cols, mat_type, input.data, input.elemSize(), sl::MEM_CPU);
+    return sl::Mat(input.cols, input.rows, mat_type, input.data, input.elemSize()*input.cols, sl::MEM_CPU);
 }
 
 Math::Quaternion slRotation2utQuaternion(sl::Rotation &input) {
@@ -349,12 +349,19 @@ void ZEDVideoComponent::process(Measurement::Timestamp ts, sl::Camera &cam) {
 
     if (m_outputPort.isConnected()) {
 
-        boost::shared_ptr< Vision::Image > pColorImage(new Vision::Image(m_imageWidth, m_imageHeight, m_imageFormatProperties));
 
-        sl::Mat image_zed = cvMat2slMat(pColorImage->Mat());
-        sl::ERROR_CODE err = cam.retrieveImage(image_zed, m_componentKey.getVideoSource(), sl::MEM_CPU, m_imageWidth, m_imageHeight);        if (err != sl::SUCCESS) {
-            LOG4CPP_WARN(logger, "Error while grabbing frame: " << sl::toString(err));
+        cv::Mat image_ocv(m_imageHeight, m_imageWidth, m_imageFormatProperties.matType);
+
+        sl::Mat image_zed = cvMat2slMat(image_ocv);
+        sl::ERROR_CODE err = cam.retrieveImage(image_zed, m_componentKey.getVideoSource(), sl::MEM_CPU, m_imageWidth, m_imageHeight);
+        if (err != sl::SUCCESS) {
+            LOG4CPP_ERROR(logger, "Error while grabbing frame: " << sl::toString(err));
+            return;
         }
+
+        boost::shared_ptr< Vision::Image > pColorImage(new Vision::Image(image_ocv));
+        pColorImage->set_pixelFormat(m_imageFormatProperties.imageFormat);
+        pColorImage->set_origin(m_imageFormatProperties.origin);
 
         if (m_autoGPUUpload) {
             Vision::OpenCLManager &oclManager = Vision::OpenCLManager::singleton();
