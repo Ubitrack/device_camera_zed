@@ -46,10 +46,9 @@ namespace Ubitrack { namespace Drivers {
 /**
 * Conversion function between sl::Mat and cv::Mat
 **/
-cv::Mat slMat2cvMat(sl::Mat &input) {
-    // Mapping between sl::MAT_TYPE and CV_TYPE
+int slMatType2cvMatType(sl::MAT_TYPE t) {
     int cv_type = -1;
-    switch (input.getDataType()) {
+    switch (t) {
         case sl::MAT_TYPE_32F_C1:
             cv_type = CV_32FC1;
             break;
@@ -77,10 +76,59 @@ cv::Mat slMat2cvMat(sl::Mat &input) {
         default:
             break;
     }
+    return cv_type;
+}
+
+cv::Mat slMat2cvMat(sl::Mat &input) {
+    // Mapping between sl::MAT_TYPE and CV_TYPE
+    int cv_type = slMatType2cvMatType(input.getDataType());
 
     // Since cv::Mat data requires a uchar* pointer, we get the uchar1 pointer from sl::Mat (getPtr<T>())
     // cv::Mat and sl::Mat will share a single memory structure
     return cv::Mat(input.getHeight(), input.getWidth(), cv_type, input.getPtr<sl::uchar1>(sl::MEM_CPU));
+}
+
+/**
+* Conversion function between cv::Mat and sl::Mat
+**/
+sl::MAT_TYPE cvMatType2slMatType(int t) {
+    sl::MAT_TYPE mat_type;
+    switch(t) {
+        case CV_32FC1:
+            mat_type = sl::MAT_TYPE_32F_C1;
+            break;
+        case CV_32FC2:
+            mat_type = sl::MAT_TYPE_32F_C2;
+            break;
+        case CV_32FC3:
+            mat_type = sl::MAT_TYPE_32F_C3;
+            break;
+        case CV_32FC4:
+            mat_type = sl::MAT_TYPE_32F_C4;
+            break;
+        case CV_8UC1:
+            mat_type = sl::MAT_TYPE_8U_C1;
+            break;
+        case CV_8UC2:
+            mat_type = sl::MAT_TYPE_8U_C2;
+            break;
+        case CV_8UC3:
+            mat_type = sl::MAT_TYPE_8U_C3;
+            break;
+        case CV_8UC4:
+            mat_type = sl::MAT_TYPE_8U_C4;
+            break;
+        default:
+            break;
+    }
+    return mat_type;
+}
+
+sl::Mat cvMat2slMat(cv::Mat &input) {
+    // Mapping between sl::MAT_TYPE and CV_TYPE
+    sl::MAT_TYPE mat_type = cvMatType2slMatType(input.type());
+    // cv::Mat and sl::Mat will share a single memory structure
+    return sl::Mat(input.rows, input.cols, mat_type, input.data, input.elemSize(), sl::MEM_CPU);
 }
 
 Math::Quaternion slRotation2utQuaternion(sl::Rotation &input) {
@@ -293,7 +341,6 @@ void ZEDVideoComponent::init(sl::Camera &cam) {
         default:
             LOG4CPP_WARN(logger, "unknown sl::MAT_TYPE ");
     }
-    m_image_zed.reset(new sl::Mat(m_imageWidth, m_imageHeight, m_mat_type));
 
 }
 
@@ -302,24 +349,12 @@ void ZEDVideoComponent::process(Measurement::Timestamp ts, sl::Camera &cam) {
 
     if (m_outputPort.isConnected()) {
 
-        // we're copying twice here - once from driver to app space and then we clone the image ..
-        // should be fixed by first allocation the image and referencing the sl::Mat with allocated memory.
-        sl::ERROR_CODE err = cam.retrieveImage(*m_image_zed, m_componentKey.getVideoSource(), sl::MEM_CPU, m_imageWidth, m_imageHeight);
-        if (err != sl::SUCCESS) {
+        boost::shared_ptr< Vision::Image > pColorImage(new Vision::Image(m_imageWidth, m_imageHeight, m_imageFormatProperties));
+
+        sl::Mat image_zed = cvMat2slMat(pColorImage->Mat());
+        sl::ERROR_CODE err = cam.retrieveImage(image_zed, m_componentKey.getVideoSource(), sl::MEM_CPU, m_imageWidth, m_imageHeight);        if (err != sl::SUCCESS) {
             LOG4CPP_WARN(logger, "Error while grabbing frame: " << sl::toString(err));
         }
-        boost::shared_ptr <Image> pColorImage;
-
-        // To share data between sl::Mat and cv::Mat, use slMat2cvMat()
-        // Only the headers and pointer to the sl::Mat are copied, not the data itself
-        cv::Mat image_ref_ocv = slMat2cvMat(*m_image_zed);
-
-        // for now we need to copy the opencv image since ref_ocv refers to a changing sl::Mat buffer
-        cv::Mat image = image_ref_ocv.clone();
-
-        pColorImage.reset(new Image(image));
-        pColorImage->set_origin(m_imageFormatProperties.origin);
-        pColorImage->set_pixelFormat(m_imageFormatProperties.imageFormat);
 
         if (m_autoGPUUpload) {
             Vision::OpenCLManager &oclManager = Vision::OpenCLManager::singleton();
