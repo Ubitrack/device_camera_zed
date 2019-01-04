@@ -182,18 +182,18 @@ namespace Ubitrack { namespace Drivers {
         using namespace Dataflow;
 
 
-        // forward declaration
-        class ZEDComponent;
+    // forward declaration
+    class ZEDComponent;
 
 
 /**
  * Module key for art.
  * Represents the port number on which to listen.
  */
-        MAKE_NODEATTRIBUTEKEY_DEFAULT( ZEDModuleKey, int, "Camera", "zedSerialNumber", 0 );
+    MAKE_NODEATTRIBUTEKEY_DEFAULT( ZEDModuleKey, int, "Camera", "zedSerialNumber", 0 );
 
 /**
- * Component key for flycapture.
+ * Component key for zed camera.
  * Represents the camera
  */
         class ZEDComponentKey
@@ -221,7 +221,7 @@ namespace Ubitrack { namespace Drivers {
                 }
 
                 if (!config) {
-                    UBITRACK_THROW("ZEDComponent Pattern has neither \"ImageOutput\" nor \"MeasureOutput\" edge");
+                    UBITRACK_THROW("ZEDComponent Pattern has neither \"ImageOutput\" nor \"PointCloudOutput\" edge");
                 }
 
                 if (config->hasAttribute("zedSensorType")) {
@@ -292,8 +292,7 @@ namespace Ubitrack { namespace Drivers {
 
 
 /**
- * Module for ZED tracker.
- * Does all the work
+ * Module for ZED camera.
  */
         class ZEDModule
                 : public Module< ZEDModuleKey, ZEDComponentKey, ZEDModule, ZEDComponent >
@@ -390,7 +389,6 @@ namespace Ubitrack { namespace Drivers {
 
         };
 
-        std::ostream& operator<<( std::ostream& s, const ZEDComponentKey& k );
 
 /**
  * BaseComponent for ZED sensor.
