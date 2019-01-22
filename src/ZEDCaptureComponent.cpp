@@ -501,8 +501,10 @@ void ZEDPointCloudComponent::process(Measurement::Timestamp ts, sl::Camera &cam)
 void ZEDRecorderComponent::init(sl::Camera &cam) {
 
     if (m_recording_enabled) {
-        LOG4CPP_INFO(logger, "Initialized Recorder Component.");
+        LOG4CPP_INFO(logger, "Initializing Recorder Component.");
         sl::String path_output(m_svo_filename.string().c_str());
+
+        LOG4CPP_DEBUG(logger, "Activate Recroding to SVO Filename:" << m_svo_filename.string());
         sl::ERROR_CODE err = cam.enableRecording(path_output, m_svo_compression_mode);
 
         if (err != sl::SUCCESS) {
@@ -512,6 +514,7 @@ void ZEDRecorderComponent::init(sl::Camera &cam) {
             return;
         }
 
+        LOG4CPP_DEBUG(logger, "Open Timestamp Filename:" << m_timestamp_filename.string());
         m_timestamp_filebuffer.open ( m_timestamp_filename.string().c_str(), std::ios::out );
         if( !m_timestamp_filebuffer.is_open()  ) {
             LOG4CPP_ERROR(logger,  "Error opening timestamp file" );
@@ -521,8 +524,8 @@ void ZEDRecorderComponent::init(sl::Camera &cam) {
         m_recording_active = true;
         m_frame_counter = 0;
 
-
     }
+    LOG4CPP_DEBUG(logger, "Initialized Recorder Component.");
 }
 
 
@@ -541,7 +544,12 @@ void ZEDRecorderComponent::process(Measurement::Timestamp ts, sl::Camera &cam) {
     }
 }
 
-
+void ZEDRecorderComponent::teardown(sl::Camera &cam) {
+    if (m_recording_active) {
+        cam.disableRecording();
+        m_recording_active = false;
+    }
+}
 
 
 std::ostream& operator<<( std::ostream& s, const ZEDComponentKey& k )

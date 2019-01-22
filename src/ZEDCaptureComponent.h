@@ -75,7 +75,8 @@ namespace {
 
 
     enum ZEDSensorType {
-        ZED_SENSOR_CONFIG = 0,
+        ZED_SENSOR_RECORD = 0,
+        ZED_SENSOR_CONFIG,
         ZED_SENSOR_VIDEO,
         ZED_SENSOR_DEPTH,
         ZED_SENSOR_TRACKING,
@@ -86,6 +87,7 @@ namespace {
     class ZEDSensorTypeMap : public std::map<std::string, ZEDSensorType > {
     public:
         ZEDSensorTypeMap() {
+            (*this)["RECORD"] = ZED_SENSOR_RECORD;
             (*this)["CONFIG"] = ZED_SENSOR_CONFIG;
             (*this)["VIDEO"] = ZED_SENSOR_VIDEO;
             (*this)["DEPTH"] = ZED_SENSOR_DEPTH;
@@ -224,6 +226,9 @@ namespace Ubitrack { namespace Drivers {
                 if (subgraph->m_DataflowClass == "ZEDCameraCalibration") {
                     m_sensor_type = ZED_SENSOR_CONFIG;
                     return;
+                } else if (subgraph->m_DataflowClass == "ZEDRecorder") {
+                    m_sensor_type = ZED_SENSOR_RECORD;
+                    return;
                 } else if (subgraph->m_DataflowClass == "ZEDVideoStream") {
                     m_sensor_type = ZED_SENSOR_VIDEO;
                     if (subgraph->hasEdge("ImageOutput"))
@@ -338,8 +343,8 @@ namespace Ubitrack { namespace Drivers {
                     config->getAttributeData("cameraFrameRate", m_cameraFrameRate);
                 }
 
-                if (config->hasAttribute("cameraFrameRate")) {
-                    config->getAttributeData("cameraFrameRate", m_cameraFrameRate);
+                if (config->hasAttribute("zedSerialNumber")) {
+                    config->getAttributeData("zedSerialNumber", m_serialNumber);
                 }
 
                 if (config->hasAttribute("zedPlayerSVOFileName")) {
@@ -612,17 +617,28 @@ namespace Ubitrack { namespace Drivers {
                     , m_timestamp_filename("frames.txt")
                     , m_frame_counter(0)
             {
-                if (subgraph->m_DataflowAttributes.hasAttribute("zedRecordingEnabled")){
-                    m_recording_enabled = subgraph->m_DataflowAttributes.getAttributeString("zedRecordingEnabled") == "true";
+
+                Graph::UTQLSubgraph::NodePtr config;
+
+                if (subgraph->hasNode("Camera"))
+                    config = subgraph->getNode("Camera");
+
+                if (!config) {
+                    UBITRACK_THROW("ZEDComponent Pattern is missing \"Camera\" node");
                 }
-                if (subgraph->m_DataflowAttributes.hasAttribute("zedRecordingSVOFilename")){
-                    m_svo_filename = subgraph->m_DataflowAttributes.getAttributeString("zedRecordingSVOFilename");
+
+
+                if (config->hasAttribute("zedRecordingEnabled")){
+                    m_recording_enabled = config->getAttributeString("zedRecordingEnabled") == "true";
                 }
-                if (subgraph->m_DataflowAttributes.hasAttribute("zedRecordingTimestampFilename")){
-                    m_timestamp_filename = subgraph->m_DataflowAttributes.getAttributeString("zedRecordingTimestampFilename");
+                if (config->hasAttribute("zedRecordingSVOFilename")){
+                    m_svo_filename = config->getAttributeString("zedRecordingSVOFilename");
                 }
-                if (subgraph->m_DataflowAttributes.hasAttribute("zedSvoCompressionMode")) {
-                    std::string sCompressionMode = subgraph->m_DataflowAttributes.getAttributeString("zedSvoCompressionMode");
+                if (config->hasAttribute("zedRecordingTimestampFilename")){
+                    m_timestamp_filename = config->getAttributeString("zedRecordingTimestampFilename");
+                }
+                if (config->hasAttribute("zedSvoCompressionMode")) {
+                    std::string sCompressionMode = config->getAttributeString("zedSvoCompressionMode");
                     if (zedCompressionModeMap.find(sCompressionMode) == zedCompressionModeMap.end())
                         UBITRACK_THROW("unknown svo compression mode: \"" + sCompressionMode + "\"");
                     m_svo_compression_mode = zedCompressionModeMap[sCompressionMode];
