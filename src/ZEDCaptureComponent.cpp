@@ -227,20 +227,26 @@ void ZEDModule::captureThread()
 
     // Set configuration parameters
     sl::InitParameters init_params;
-    init_params.camera_resolution = m_cameraResolution;
-    init_params.depth_mode = m_depthMode;
-    init_params.camera_fps = m_cameraFrameRate;
-    init_params.coordinate_units = sl::UNIT_METER;
-    init_params.coordinate_system = sl::COORDINATE_SYSTEM_RIGHT_HANDED_Y_UP;
-    init_params.sdk_verbose = true;
 
-    if (m_serialNumber != 0) {
-        init_params.input.setFromSerialNumber(m_serialNumber);
+    // pull configuration
+    ComponentList allComponents = getAllComponents();
+
+    for (auto i = allComponents.begin(); i != allComponents.end(); ++i) {
+        (*i)->configure(init_params);
     }
 
-    if ((!m_svo_player_filename.empty()) && ( boost::filesystem::is_regular_file( m_svo_player_filename ) ) ) {
-        LOG4CPP_WARN(logger, "ZED Camera is in Playback Mode: "<< m_svo_player_filename.string());
-        init_params.svo_input_filename.set(m_svo_player_filename.string().c_str());
+    // if device is not configured for playback, configure sensor as follows
+    if (init_params.svo_input_filename.empty()) {
+        init_params.camera_resolution = m_cameraResolution;
+        init_params.depth_mode = m_depthMode;
+        init_params.camera_fps = m_cameraFrameRate;
+        init_params.coordinate_units = sl::UNIT_METER;
+        init_params.coordinate_system = sl::COORDINATE_SYSTEM_RIGHT_HANDED_Y_UP;
+        init_params.sdk_verbose = true;
+
+        if (m_serialNumber != 0) {
+            init_params.input.setFromSerialNumber(m_serialNumber);
+        }
     }
 
     {
@@ -256,8 +262,6 @@ void ZEDModule::captureThread()
     }
 
     // initialize components
-    ComponentList allComponents = getAllComponents();
-
     for (auto i = allComponents.begin(); i != allComponents.end(); ++i) {
         (*i)->init(m_zedcamera);
     }
@@ -494,6 +498,18 @@ void ZEDPointCloudComponent::process(Measurement::Timestamp ts, sl::Camera &cam)
         }
 
         m_outputPort.send(Measurement::PositionList(ts, pPointCloud));
+    }
+}
+
+
+void ZEDRecorderComponent::configure(sl::InitParameters& params) {
+    if (m_playback_enabled) {
+        if ((!m_svo_player_filename.empty()) && ( boost::filesystem::is_regular_file( m_svo_player_filename ) ) ) {
+            LOG4CPP_WARN(logger, "ZED Camera is in Playback Mode: "<< m_svo_player_filename.string());
+            params.svo_input_filename.set(m_svo_player_filename.string().c_str());
+        } else {
+            LOG4CPP_WARN(logger, "ZED Player - File not found: " <<  m_svo_player_filename.string())
+        }
     }
 }
 

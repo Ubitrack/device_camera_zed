@@ -327,7 +327,6 @@ namespace Ubitrack { namespace Drivers {
             , m_cameraResolution(sl::RESOLUTION_HD2K)
             , m_depthMode(sl::DEPTH_MODE_ULTRA)
             , m_sensingMode(sl::SENSING_MODE_STANDARD)
-            , m_svo_player_filename("")
             {
 
                 Graph::UTQLSubgraph::NodePtr config;
@@ -345,10 +344,6 @@ namespace Ubitrack { namespace Drivers {
 
                 if (config->hasAttribute("zedSerialNumber")) {
                     config->getAttributeData("zedSerialNumber", m_serialNumber);
-                }
-
-                if (config->hasAttribute("zedPlayerSVOFileName")) {
-                    m_svo_player_filename = config->getAttributeString("zedPlayerSVOFileName");
                 }
 
                 if (config->hasAttribute("zedCameraResolution")) {
@@ -404,8 +399,6 @@ namespace Ubitrack { namespace Drivers {
             /** framerate **/
             int m_cameraFrameRate;
 
-            boost::filesystem::path m_svo_player_filename;
-
             /** create the components **/
             boost::shared_ptr< ZEDComponent > createComponent( const std::string&, const std::string& name, boost::shared_ptr< Graph::UTQLSubgraph> subgraph,
                                                                  const ComponentKey& key, ModuleClass* pModule );
@@ -430,6 +423,9 @@ namespace Ubitrack { namespace Drivers {
             {
 
             }
+
+            /** configure camera **/
+            virtual void configure(sl::InitParameters &params) {};
 
             /** initialize component **/
             virtual void init(sl::Camera &cam) {};
@@ -613,9 +609,11 @@ namespace Ubitrack { namespace Drivers {
                     , m_svo_compression_mode(sl::SVO_COMPRESSION_MODE_AVCHD)
                     , m_recording_enabled(false)
                     , m_recording_active(false)
+                    , m_playback_enabled(false)
                     , m_svo_filename("")
                     , m_timestamp_filename("frames.txt")
                     , m_frame_counter(0)
+                    , m_svo_player_filename("")
             {
 
                 Graph::UTQLSubgraph::NodePtr config;
@@ -626,7 +624,6 @@ namespace Ubitrack { namespace Drivers {
                 if (!config) {
                     UBITRACK_THROW("ZEDComponent Pattern is missing \"Camera\" node");
                 }
-
 
                 if (config->hasAttribute("zedRecordingEnabled")){
                     m_recording_enabled = config->getAttributeString("zedRecordingEnabled") == "true";
@@ -643,7 +640,21 @@ namespace Ubitrack { namespace Drivers {
                         UBITRACK_THROW("unknown svo compression mode: \"" + sCompressionMode + "\"");
                     m_svo_compression_mode = zedCompressionModeMap[sCompressionMode];
                 }
+
+                if (config->hasAttribute("zedPlaybackEnabled")){
+                    m_playback_enabled = config->getAttributeString("zedPlaybackEnabled") == "true";
+                    if (m_playback_enabled) {
+                        m_recording_enabled = false;
+                    }
+                }
+                if (config->hasAttribute("zedPlaybackSVOFilename")) {
+                    m_svo_player_filename = config->getAttributeString("zedPlaybackSVOFilename");
+                }
+
             }
+
+            /** configure component **/
+            virtual void configure(sl::InitParameters &params);
 
             /** initialize component **/
             virtual void init(sl::Camera &cam);
@@ -662,6 +673,12 @@ namespace Ubitrack { namespace Drivers {
             sl::SVO_COMPRESSION_MODE m_svo_compression_mode;
 
             std::filebuf m_timestamp_filebuffer;
+
+
+            boost::filesystem::path m_svo_player_filename;
+
+            bool m_playback_enabled;
+
 
             bool m_recording_enabled;
             bool m_recording_active;

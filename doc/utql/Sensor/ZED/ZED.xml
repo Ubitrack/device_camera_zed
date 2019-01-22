@@ -167,13 +167,15 @@
 				<Attribute name="zedCameraResolution" xsi:type="EnumAttributeReferenceType"/>
 				<Attribute name="zedDepthMode" xsi:type="EnumAttributeReferenceType"/>
 				<Attribute name="zedSensingMode" xsi:type="EnumAttributeReferenceType"/>
-				<Attribute name="cameraFrameRate" xsi:type="IntAttributeReferenceType"/>
 
 				<Attribute name="zedRecordingEnabled" xsi:type="EnumAttributeReferenceType"/>
+				<Attribute name="zedRecordingSVOFilename" displayName="Record SVO" default="zedcapture.svo" xsi:type="PathAttributeDeclarationType"/>
+				<Attribute name="zedRecordingTimestampFilename" displayName="Record Timestamp" default="zedcapture_ts.txt" xsi:type="PathAttributeDeclarationType"/>
 				<Attribute name="zedSvoCompressionMode" xsi:type="EnumAttributeReferenceType"/>
 
-				<Attribute name="zedRecordingSVOFilename" displayName="SVO Filename" default="zedcapture.svo" xsi:type="PathAttributeDeclarationType"/>
-				<Attribute name="zedRecordingTimestampFilename" displayName="Timestamp Filename" default="zedcapture_ts.txt" xsi:type="PathAttributeDeclarationType"/>
+				<Attribute name="zedPlaybackEnabled" xsi:type="EnumAttributeReferenceType"/>
+				<Attribute name="zedPlaybackSVOFilename" displayName="Playback SVO" default="zedcapture.svo" xsi:type="PathAttributeDeclarationType"/>
+				<Attribute name="zedPlaybackTimestampFilename" displayName="Record Timestamp" default="zedcapture_ts.txt" xsi:type="PathAttributeDeclarationType"/>
 			</Node>
 		</Output>
 
@@ -238,6 +240,17 @@
 			<Description>
 				<h:p>
 					Is Recording enabled?
+				</h:p>
+			</Description>
+			<EnumValue name="true" displayName="True"/>
+			<EnumValue name="false" displayName="False"/>
+
+		</Attribute>
+
+		<Attribute name="zedPlaybackEnabled" displayName="ZED Playback enabled?" default="false" xsi:type="EnumAttributeDeclarationType">
+			<Description>
+				<h:p>
+					Is Playback enabled?
 				</h:p>
 			</Description>
 			<EnumValue name="true" displayName="True"/>
