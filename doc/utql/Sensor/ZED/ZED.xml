@@ -16,6 +16,7 @@
 			<Node name="Camera" displayName="Camera" >
 				<Description><p xmlns="http://www.w3.org/1999/xhtml">ZED Camera</p></Description>
 				<Attribute name="zedSerialNumber" xsi:type="IntAttributeReferenceType"/>
+				<Attribute name="cameraFrameRate" xsi:type="IntAttributeReferenceType"/>
 
 				<Attribute name="zedCameraResolution" xsi:type="EnumAttributeReferenceType"/>
 				<Attribute name="zedDepthMode" xsi:type="EnumAttributeReferenceType"/>
@@ -60,6 +61,7 @@
 			<Node name="Camera" displayName="Camera" >
 				<Description><p xmlns="http://www.w3.org/1999/xhtml">ZED Camera</p></Description>
 				<Attribute name="zedSerialNumber" xsi:type="IntAttributeReferenceType"/>
+				<Attribute name="cameraFrameRate" xsi:type="IntAttributeReferenceType"/>
 
 				<Attribute name="zedCameraResolution" xsi:type="EnumAttributeReferenceType"/>
 				<Attribute name="zedDepthMode" xsi:type="EnumAttributeReferenceType"/>
@@ -94,6 +96,7 @@
 			<Node name="Camera" displayName="Left Camera" >
 				<Description><p xmlns="http://www.w3.org/1999/xhtml">ZED Left Camera</p></Description>
 				<Attribute name="zedSerialNumber" xsi:type="IntAttributeReferenceType"/>
+				<Attribute name="cameraFrameRate" xsi:type="IntAttributeReferenceType"/>
 
 				<Attribute name="zedCameraResolution" xsi:type="EnumAttributeReferenceType"/>
 				<Attribute name="zedDepthMode" xsi:type="EnumAttributeReferenceType"/>
@@ -156,6 +159,9 @@
 
 		<Attribute name="zedSerialNumber" displayName="ZED Serial Number" default="0" xsi:type="IntAttributeDeclarationType">
 			<Description><p xmlns="http://www.w3.org/1999/xhtml">Serial Number of the ZED Device.</p></Description>
+		</Attribute>
+		<Attribute name="cameraFrameRate" displayName="ZED Camera Framerate" default="0" xsi:type="IntAttributeDeclarationType">
+			<Description><p xmlns="http://www.w3.org/1999/xhtml">Capture Frame Rate of the ZED Device.</p></Description>
 		</Attribute>
 
 		<Attribute name="zedCameraResolution" displayName="Sensor Resolution" default="RESOLUTION_HD2K" xsi:type="EnumAttributeDeclarationType">
