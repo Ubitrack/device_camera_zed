@@ -51,6 +51,7 @@
 #include <boost/thread.hpp>
 #include <boost/bind.hpp>
 #include <boost/scoped_ptr.hpp>
+#include <boost/filesystem.hpp>
 
 #include <utDataflow/PushSupplier.h>
 #include <utDataflow/PullSupplier.h>
@@ -174,6 +175,21 @@ namespace {
     };
 
     static ZEDDepthMeasureSourceMap zedDepthMeasureSourceMap;
+
+    class ZEDCompressionModeMap : public std::map<std::string, sl::SVO_COMPRESSION_MODE > {
+    public:
+        ZEDCompressionModeMap() {
+            (*this)["RAW"] = sl::SVO_COMPRESSION_MODE_RAW;
+            (*this)["LOSSLESS"] = sl::SVO_COMPRESSION_MODE_LOSSLESS;
+            (*this)["LOSSY"] = sl::SVO_COMPRESSION_MODE_LOSSY;
+            (*this)["AVCHD"] = sl::SVO_COMPRESSION_MODE_AVCHD;
+            (*this)["HEVC"] = sl::SVO_COMPRESSION_MODE_HEVC;
+        }
+    };
+
+    static ZEDCompressionModeMap zedCompressionModeMap;
+
+
 }
 
 
@@ -306,6 +322,7 @@ namespace Ubitrack { namespace Drivers {
             , m_cameraResolution(sl::RESOLUTION_HD2K)
             , m_depthMode(sl::DEPTH_MODE_ULTRA)
             , m_sensingMode(sl::SENSING_MODE_STANDARD)
+            , m_svo_player_filename("")
             {
 
                 Graph::UTQLSubgraph::NodePtr config;
@@ -321,8 +338,12 @@ namespace Ubitrack { namespace Drivers {
                     config->getAttributeData("cameraFrameRate", m_cameraFrameRate);
                 }
 
-                if (config->hasAttribute("zedSerialNumber")) {
-                    config->getAttributeData("zedSerialNumber", m_serialNumber);
+                if (config->hasAttribute("cameraFrameRate")) {
+                    config->getAttributeData("cameraFrameRate", m_cameraFrameRate);
+                }
+
+                if (config->hasAttribute("zedPlayerSVOFileName")) {
+                    m_svo_player_filename = config->getAttributeString("zedPlayerSVOFileName");
                 }
 
                 if (config->hasAttribute("zedCameraResolution")) {
@@ -378,6 +399,8 @@ namespace Ubitrack { namespace Drivers {
             /** framerate **/
             int m_cameraFrameRate;
 
+            boost::filesystem::path m_svo_player_filename;
+
             /** create the components **/
             boost::shared_ptr< ZEDComponent > createComponent( const std::string&, const std::string& name, boost::shared_ptr< Graph::UTQLSubgraph> subgraph,
                                                                  const ComponentKey& key, ModuleClass* pModule );
@@ -408,6 +431,9 @@ namespace Ubitrack { namespace Drivers {
 
             /** process data **/
             virtual void process(Measurement::Timestamp ts, sl::Camera &cam) {};
+
+            /** teardown component **/
+            virtual void teardown(sl::Camera &cam) {};
 
 
             /** destructor */
@@ -569,6 +595,63 @@ namespace Ubitrack { namespace Drivers {
 
             sl::MAT_TYPE m_mat_type;
             std::unique_ptr<sl::Mat> m_pointcloud_zed;
+
+        };
+
+
+        class ZEDRecorderComponent : public ZEDComponent {
+        public:
+            /** constructor */
+            ZEDRecorderComponent( const std::string& name, boost::shared_ptr< Graph::UTQLSubgraph > subgraph,
+                                    const ZEDComponentKey& componentKey, ZEDModule* pModule )
+                    : ZEDComponent(name, subgraph, componentKey, pModule)
+                    , m_svo_compression_mode(sl::SVO_COMPRESSION_MODE_AVCHD)
+                    , m_recording_enabled(false)
+                    , m_recording_active(false)
+                    , m_svo_filename("")
+                    , m_timestamp_filename("frames.txt")
+                    , m_frame_counter(0)
+            {
+                if (subgraph->m_DataflowAttributes.hasAttribute("zedRecordingEnabled")){
+                    m_recording_enabled = subgraph->m_DataflowAttributes.getAttributeString("zedRecordingEnabled") == "true";
+                }
+                if (subgraph->m_DataflowAttributes.hasAttribute("zedRecordingSVOFilename")){
+                    m_svo_filename = subgraph->m_DataflowAttributes.getAttributeString("zedRecordingSVOFilename");
+                }
+                if (subgraph->m_DataflowAttributes.hasAttribute("zedRecordingTimestampFilename")){
+                    m_timestamp_filename = subgraph->m_DataflowAttributes.getAttributeString("zedRecordingTimestampFilename");
+                }
+                if (subgraph->m_DataflowAttributes.hasAttribute("zedSvoCompressionMode")) {
+                    std::string sCompressionMode = subgraph->m_DataflowAttributes.getAttributeString("zedSvoCompressionMode");
+                    if (zedCompressionModeMap.find(sCompressionMode) == zedCompressionModeMap.end())
+                        UBITRACK_THROW("unknown svo compression mode: \"" + sCompressionMode + "\"");
+                    m_svo_compression_mode = zedCompressionModeMap[sCompressionMode];
+                }
+            }
+
+            /** initialize component **/
+            virtual void init(sl::Camera &cam);
+
+            /** process data **/
+            virtual void process(Measurement::Timestamp ts, sl::Camera &cam);
+
+            /** teardown component **/
+            virtual void teardown(sl::Camera &cam);
+
+            /** destructor */
+            virtual ~ZEDRecorderComponent() {};
+
+        protected:
+
+            sl::SVO_COMPRESSION_MODE m_svo_compression_mode;
+
+            std::filebuf m_timestamp_filebuffer;
+
+            bool m_recording_enabled;
+            bool m_recording_active;
+            boost::filesystem::path m_svo_filename;
+            boost::filesystem::path m_timestamp_filename;
+            size_t m_frame_counter;
 
         };
 

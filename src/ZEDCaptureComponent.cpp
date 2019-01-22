@@ -29,6 +29,7 @@
  * @author Ulrich Eck <ulrich.eck@tum.de>
  */
 
+
 #include "ZEDCaptureComponent.h"
 #include <utUtil/OS.h>
 
@@ -213,6 +214,8 @@ boost::shared_ptr< ZEDComponent > ZEDModule::createComponent( const std::string&
         return boost::shared_ptr< ZEDComponent >( new ZEDCameraCalibrationComponent( name, subgraph, key, pModule ) );
     else if ( type == "ZEDPointCloud" )
         return boost::shared_ptr< ZEDComponent >( new ZEDPointCloudComponent( name, subgraph, key, pModule ) );
+    else if ( type == "ZEDRecorder" )
+        return boost::shared_ptr< ZEDComponent >( new ZEDRecorderComponent( name, subgraph, key, pModule ) );
 
     UBITRACK_THROW( "Class " + type + " not supported by ZED module" );
 }
@@ -230,8 +233,14 @@ void ZEDModule::captureThread()
     init_params.coordinate_units = sl::UNIT_METER;
     init_params.coordinate_system = sl::COORDINATE_SYSTEM_RIGHT_HANDED_Y_UP;
     init_params.sdk_verbose = true;
+
     if (m_serialNumber != 0) {
         init_params.input.setFromSerialNumber(m_serialNumber);
+    }
+
+    if ((!m_svo_player_filename.empty()) && ( boost::filesystem::is_regular_file( m_svo_player_filename ) ) ) {
+        LOG4CPP_WARN(logger, "ZED Camera is in Playback Mode: "<< m_svo_player_filename.string());
+        init_params.svo_input_filename.set(m_svo_player_filename.string().c_str());
     }
 
     {
@@ -288,6 +297,11 @@ void ZEDModule::captureThread()
                 (*i)->process(time, m_zedcamera);
             }
         }
+    }
+
+    // teardown components
+    for (auto i = allComponents.begin(); i != allComponents.end(); ++i) {
+        (*i)->teardown(m_zedcamera);
     }
 
     if (m_zedcamera.isOpened()) {
@@ -484,6 +498,52 @@ void ZEDPointCloudComponent::process(Measurement::Timestamp ts, sl::Camera &cam)
 }
 
 
+void ZEDRecorderComponent::init(sl::Camera &cam) {
+
+    if (m_recording_enabled) {
+        LOG4CPP_INFO(logger, "Initialized Recorder Component.");
+        sl::String path_output(m_svo_filename.string().c_str());
+        sl::ERROR_CODE err = cam.enableRecording(path_output, m_svo_compression_mode);
+
+        if (err != sl::SUCCESS) {
+            LOG4CPP_ERROR(logger, "Recording initialization error. " << toString(err));
+            if (err == sl::ERROR_CODE_SVO_RECORDING_ERROR)
+                LOG4CPP_ERROR(logger, " Note : This error mostly comes from a wrong path or missing writing permissions. Also did you specify a filename, not a directory?");
+            return;
+        }
+
+        m_timestamp_filebuffer.open ( m_timestamp_filename.string().c_str(), std::ios::out );
+        if( !m_timestamp_filebuffer.is_open()  ) {
+            LOG4CPP_ERROR(logger,  "Error opening timestamp file" );
+            return;
+        }
+
+        m_recording_active = true;
+        m_frame_counter = 0;
+
+
+    }
+}
+
+
+void ZEDRecorderComponent::process(Measurement::Timestamp ts, sl::Camera &cam) {
+    if (m_recording_active) {
+
+        // record a frame using zed sdk
+        cam.record();
+
+        // write the corresponding timestamp to a file
+        std::ostream os( &m_timestamp_filebuffer );
+        os << ts << " " << m_frame_counter << std::endl;
+
+        // increase the frame counter
+        m_frame_counter++;
+    }
+}
+
+
+
+
 std::ostream& operator<<( std::ostream& s, const ZEDComponentKey& k )
 {
     s << "ZEDComponentKey[ "
@@ -500,6 +560,7 @@ UBITRACK_REGISTER_COMPONENT( Dataflow::ComponentFactory* const cf ) {
     moduleComponents.emplace_back( "ZEDVideoStream" );
     moduleComponents.emplace_back( "ZEDCameraCalibration" );
     moduleComponents.emplace_back( "ZEDPointCloud" );
+    moduleComponents.emplace_back( "ZEDRecorder" );
 
     cf->registerModule< Ubitrack::Drivers::ZEDModule > ( moduleComponents );
 }

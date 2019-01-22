@@ -152,6 +152,37 @@
 	</Pattern>
 
 
+	<Pattern name="ZEDRecorder" displayName="ZED Recorder">
+		<Description>
+			<h:p>
+				This component records the camera raw data to an SVO file.
+			</h:p>
+		</Description>
+		<Output>
+			<Node name="Camera" displayName="Camera" >
+				<Description><p xmlns="http://www.w3.org/1999/xhtml">ZED Camera</p></Description>
+				<Attribute name="zedSerialNumber" xsi:type="IntAttributeReferenceType"/>
+				<Attribute name="cameraFrameRate" xsi:type="IntAttributeReferenceType"/>
+
+				<Attribute name="zedCameraResolution" xsi:type="EnumAttributeReferenceType"/>
+				<Attribute name="zedDepthMode" xsi:type="EnumAttributeReferenceType"/>
+				<Attribute name="zedSensingMode" xsi:type="EnumAttributeReferenceType"/>
+				<Attribute name="cameraFrameRate" xsi:type="IntAttributeReferenceType"/>
+
+				<Attribute name="zedRecordingEnabled" xsi:type="EnumAttributeReferenceType"/>
+				<Attribute name="zedSvoCompressionMode" xsi:type="EnumAttributeReferenceType"/>
+
+				<Attribute name="zedRecordingSVOFilename" displayName="SVO Filename" default="zedcapture.svo" xsi:type="PathAttributeDeclarationType"/>
+				<Attribute name="zedRecordingTimestampFilename" displayName="Timestamp Filename" default="zedcapture_ts.txt" xsi:type="PathAttributeDeclarationType"/>
+			</Node>
+		</Output>
+
+		<DataflowConfiguration>
+			<UbitrackLib class="ZEDRecorder" />
+
+		</DataflowConfiguration>
+	</Pattern>
+
 	<!-- Attribute declarations -->
 
 	<GlobalNodeAttributeDeclarations>
@@ -200,6 +231,31 @@
 			</Description>
 			<EnumValue name="SENSING_MODE_STANDARD" displayName="STANDARD"/>
 			<EnumValue name="SENSING_MODE_FILL" displayName="FILL"/>
+
+		</Attribute>
+
+		<Attribute name="zedRecordingEnabled" displayName="ZED Recording enabled?" default="true" xsi:type="EnumAttributeDeclarationType">
+			<Description>
+				<h:p>
+					Is Recording enabled?
+				</h:p>
+			</Description>
+			<EnumValue name="true" displayName="True"/>
+			<EnumValue name="false" displayName="False"/>
+
+		</Attribute>
+
+		<Attribute name="zedSvoCompressionMode" displayName="SVO Compression Mode" default="AVCHD" xsi:type="EnumAttributeDeclarationType">
+			<Description>
+				<h:p>
+					SVO Compression Mode.
+				</h:p>
+			</Description>
+			<EnumValue name="RAW" displayName="RAW" />
+			<EnumValue name="LOSSLESS" displayName="LOSSLESS" />
+			<EnumValue name="LOSSY" displayName="LOSSY" />
+			<EnumValue name="AVCHD" displayName="AVCHD" />
+			<EnumValue name="HEVC" displayName="HEVC" />
 
 		</Attribute>
 
