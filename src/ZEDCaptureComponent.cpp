@@ -283,7 +283,7 @@ void ZEDModule::captureThread()
         sl::ERROR_CODE err = m_zedcamera.grab(runtime_parameters);
         if (err != sl::SUCCESS) {
             if (err == sl::ERROR_CODE_NOT_A_NEW_FRAME) {
-                Ubitrack::Util::sleep(1);
+                Ubitrack::Util::sleep(5);
             } else {
                 LOG4CPP_WARN(logger, "Error while grabbing frame: " << err);
             }
@@ -507,6 +507,7 @@ void ZEDRecorderComponent::configure(sl::InitParameters& params) {
         if ((!m_svo_player_filename.empty()) && ( boost::filesystem::is_regular_file( m_svo_player_filename ) ) ) {
             LOG4CPP_WARN(logger, "ZED Camera is in Playback Mode: "<< m_svo_player_filename.string());
             params.svo_input_filename.set(m_svo_player_filename.string().c_str());
+            params.svo_real_time_mode = true;
         } else {
             LOG4CPP_WARN(logger, "ZED Player - File not found: " <<  m_svo_player_filename.string())
         }
