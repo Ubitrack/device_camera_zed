@@ -86,6 +86,41 @@
 		</DataflowConfiguration>
 	</Pattern>
 
+	<Pattern name="ZEDDepthMap" displayName="ZED Depth Map">
+		<Description>
+			<h:p>
+				This component retrieves the depth images from a ZED device and pushes them.
+			</h:p>
+		</Description>
+		<Output>
+			<Node name="Camera" displayName="Camera" >
+				<Description><p xmlns="http://www.w3.org/1999/xhtml">ZED Camera</p></Description>
+				<Attribute name="zedSerialNumber" xsi:type="IntAttributeReferenceType"/>
+				<Attribute name="cameraFrameRate" xsi:type="IntAttributeReferenceType"/>
+
+				<Attribute name="zedCameraResolution" xsi:type="EnumAttributeReferenceType"/>
+				<Attribute name="zedDepthMode" xsi:type="EnumAttributeReferenceType"/>
+				<Attribute name="zedSensingMode" xsi:type="EnumAttributeReferenceType"/>
+			</Node>
+			<Node name="ImagePlane" displayName="3D Point Cloud" />
+			<Edge name="DepthMapOutput" source="Camera" destination="ImagePlane" displayName="Output DepthMap">
+				<Description>
+					<h:p>The output point cloud.</h:p>
+				</Description>
+				<Attribute name="type" value="Image" xsi:type="EnumAttributeReferenceType"/>
+				<Attribute name="mode" value="push" xsi:type="EnumAttributeReferenceType"/>
+
+				<Attribute name="zedSensorType" value="DEPTH" xsi:type="EnumAttributeReferenceType"/>
+				<Attribute name="zedMeasureSource" value="MEASURE_DEPTH" xsi:type="EnumAttributeReferenceType"/>
+			</Edge>
+		</Output>
+
+		<DataflowConfiguration>
+			<UbitrackLib class="ZEDDepthMap" />
+
+		</DataflowConfiguration>
+	</Pattern>
+
 	<Pattern name="ZEDCameraCalibration" displayName="ZED Camera Calibration">
 		<Description>
 			<h:p>

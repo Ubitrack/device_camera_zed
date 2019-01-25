@@ -214,6 +214,8 @@ boost::shared_ptr< ZEDComponent > ZEDModule::createComponent( const std::string&
         return boost::shared_ptr< ZEDComponent >( new ZEDCameraCalibrationComponent( name, subgraph, key, pModule ) );
     else if ( type == "ZEDPointCloud" )
         return boost::shared_ptr< ZEDComponent >( new ZEDPointCloudComponent( name, subgraph, key, pModule ) );
+    else if ( type == "ZEDDepthMap" )
+        return boost::shared_ptr< ZEDComponent >( new ZEDDepthMapComponent( name, subgraph, key, pModule ) );
     else if ( type == "ZEDRecorder" )
         return boost::shared_ptr< ZEDComponent >( new ZEDRecorderComponent( name, subgraph, key, pModule ) );
 
@@ -500,6 +502,69 @@ void ZEDPointCloudComponent::process(Measurement::Timestamp ts, sl::Camera &cam)
         m_outputPort.send(Measurement::PositionList(ts, pPointCloud));
     }
 }
+
+
+
+void ZEDDepthMapComponent::init(sl::Camera &cam) {
+
+    sl::Resolution image_size = cam.getResolution();
+    m_imageWidth = image_size.width;
+    m_imageHeight = image_size.height;
+
+
+    m_imageFormatProperties = Vision::Image::ImageFormatProperties();
+
+    switch (m_componentKey.getMeasureSource()) {
+        case sl::MEASURE_DISPARITY: /**< Disparity map. Each pixel contains 1 float. sl::MAT_TYPE_32F_C1.*/
+        case sl::MEASURE_DISPARITY_RIGHT: /**< Disparity map for right sensor. Each pixel contains 1 float. sl::MAT_TYPE_32F_C1.*/
+        case sl::MEASURE_DEPTH: /**< Depth map. Each pixel contains 1 float. sl::MAT_TYPE_32F_C1.*/
+        case sl::MEASURE_DEPTH_RIGHT: /**< Depth map for right sensor. Each pixel contains 1 float. sl::MAT_TYPE_32F_C1.*/
+        case sl::MEASURE_CONFIDENCE: /**< Certainty/confidence of the depth map. Each pixel contains 1 float. sl::MAT_TYPE_32F_C1.*/
+            m_imageFormatProperties.depth = CV_32F;
+            m_imageFormatProperties.channels = 1;
+            m_imageFormatProperties.matType = CV_32FC1;
+            m_imageFormatProperties.bitsPerPixel = 32;
+            m_imageFormatProperties.origin = 0;
+            m_imageFormatProperties.imageFormat = Vision::Image::DEPTH;
+            break;
+        default:
+            LOG4CPP_WARN(logger, "unknown MeasureSource.. ");
+    }
+
+}
+
+
+void ZEDDepthMapComponent::process(Measurement::Timestamp ts, sl::Camera &cam) {
+
+    if (m_outputPort.isConnected()) {
+
+
+        cv::Mat image_ocv(m_imageHeight, m_imageWidth, m_imageFormatProperties.matType);
+
+        sl::Mat image_zed = cvMat2slMat(image_ocv);
+        sl::ERROR_CODE err = cam.retrieveMeasure(image_zed, m_componentKey.getMeasureSource(), sl::MEM_CPU, m_imageWidth, m_imageHeight);
+        if (err != sl::SUCCESS) {
+            LOG4CPP_ERROR(logger, "Error while grabbing frame: " << sl::toString(err));
+            return;
+        }
+
+        boost::shared_ptr< Vision::Image > pDepthImage(new Vision::Image(image_ocv));
+        pDepthImage->set_pixelFormat(m_imageFormatProperties.imageFormat);
+        pDepthImage->set_origin(m_imageFormatProperties.origin);
+
+        if (m_autoGPUUpload) {
+            Vision::OpenCLManager &oclManager = Vision::OpenCLManager::singleton();
+            if (oclManager.isInitialized()) {
+                //force upload to the GPU
+                pDepthImage->uMat();
+            }
+        }
+
+        m_outputPort.send(Measurement::ImageMeasurement(ts, pDepthImage));
+    }
+
+}
+
 
 
 void ZEDRecorderComponent::configure(sl::InitParameters& params) {
