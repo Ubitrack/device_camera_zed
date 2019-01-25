@@ -650,6 +650,7 @@ UBITRACK_REGISTER_COMPONENT( Dataflow::ComponentFactory* const cf ) {
     moduleComponents.emplace_back( "ZEDVideoStream" );
     moduleComponents.emplace_back( "ZEDCameraCalibration" );
     moduleComponents.emplace_back( "ZEDPointCloud" );
+    moduleComponents.emplace_back( "ZEDDepthMap" );
     moduleComponents.emplace_back( "ZEDRecorder" );
 
     cf->registerModule< Ubitrack::Drivers::ZEDModule > ( moduleComponents );
