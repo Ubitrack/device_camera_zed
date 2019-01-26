@@ -237,6 +237,10 @@ namespace Ubitrack { namespace Drivers {
                     m_sensor_type = ZED_SENSOR_DEPTH;
                     if (subgraph->hasEdge("PointCloudOutput"))
                         config = subgraph->getEdge("PointCloudOutput");
+                } else if (subgraph->m_DataflowClass == "ZEDDepthMap") {
+                    m_sensor_type = ZED_SENSOR_DEPTH;
+                    if (subgraph->hasEdge("DepthMapOutput"))
+                        config = subgraph->getEdge("DepthMapOutput");
                 } else   {
                     UBITRACK_THROW("ZED Camera Invalid Component Sensor Type.");
                 }
