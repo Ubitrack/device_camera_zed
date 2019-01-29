@@ -242,14 +242,15 @@ void ZEDModule::captureThread()
         init_params.camera_resolution = m_cameraResolution;
         init_params.depth_mode = m_depthMode;
         init_params.camera_fps = m_cameraFrameRate;
-        init_params.coordinate_units = sl::UNIT_METER;
-        init_params.coordinate_system = sl::COORDINATE_SYSTEM_RIGHT_HANDED_Y_UP;
-        init_params.sdk_verbose = true;
 
         if (m_serialNumber != 0) {
             init_params.input.setFromSerialNumber(m_serialNumber);
         }
     }
+
+    init_params.coordinate_units = sl::UNIT_MILLIMETER;
+    init_params.coordinate_system = sl::COORDINATE_SYSTEM_RIGHT_HANDED_Y_UP;
+    init_params.sdk_verbose = true;
 
     {
         // Open the camera
