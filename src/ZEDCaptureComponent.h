@@ -237,6 +237,10 @@ namespace Ubitrack { namespace Drivers {
                     m_sensor_type = ZED_SENSOR_DEPTH;
                     if (subgraph->hasEdge("PointCloudOutput"))
                         config = subgraph->getEdge("PointCloudOutput");
+                } else if (subgraph->m_DataflowClass == "ZEDDepthMap") {
+                    m_sensor_type = ZED_SENSOR_DEPTH;
+                    if (subgraph->hasEdge("DepthMapOutput"))
+                        config = subgraph->getEdge("DepthMapOutput");
                 } else   {
                     UBITRACK_THROW("ZED Camera Invalid Component Sensor Type.");
                 }
@@ -560,6 +564,9 @@ namespace Ubitrack { namespace Drivers {
         };
 
 
+/**
+ * PointCloudComponent for ZED sensor.
+ */
         class ZEDPointCloudComponent : public ZEDComponent {
         public:
             /** constructor */
@@ -599,6 +606,61 @@ namespace Ubitrack { namespace Drivers {
 
         };
 
+
+
+/**
+ * VideoComponent for ZED sensor.
+ */
+        class ZEDDepthMapComponent : public ZEDComponent {
+        public:
+            /** constructor */
+            ZEDDepthMapComponent( const std::string& name, boost::shared_ptr< Graph::UTQLSubgraph > subgraph,
+                               const ZEDComponentKey& componentKey, ZEDModule* pModule )
+                    : ZEDComponent(name, subgraph, componentKey, pModule)
+                    , m_outputPort("DepthMapOutput", *this)
+                    , m_mat_type(sl::MAT_TYPE_32F_C1)
+                    , m_imageWidth(0)
+                    , m_imageHeight(0)
+                    , m_autoGPUUpload( false )
+            {
+                Vision::OpenCLManager& oclManager = Vision::OpenCLManager::singleton();
+                if (oclManager.isEnabled()) {
+                    if (subgraph->m_DataflowAttributes.hasAttribute("uploadImageOnGPU")){
+                        m_autoGPUUpload = subgraph->m_DataflowAttributes.getAttributeString("uploadImageOnGPU") == "true";
+                    }
+                    if (m_autoGPUUpload){
+                        oclManager.activate();
+                    }
+                }
+
+            }
+
+            /** initialize component **/
+            virtual void init(sl::Camera &cam);
+
+            /** process data **/
+            virtual void process(Measurement::Timestamp ts, sl::Camera &cam);
+
+
+            /** destructor */
+            virtual ~ZEDDepthMapComponent() {};
+
+        protected:
+            Dataflow::PushSupplier <Measurement::ImageMeasurement> m_outputPort;
+            unsigned int m_imageWidth;
+            unsigned int m_imageHeight;
+
+            sl::MAT_TYPE m_mat_type;
+            std::unique_ptr<sl::Mat> m_image_zed;
+            Vision::Image::ImageFormatProperties m_imageFormatProperties;
+            bool m_autoGPUUpload;
+
+
+        };
+
+/**
+ * Recorder/PlayerComponent for ZED sensor.
+ */
 
         class ZEDRecorderComponent : public ZEDComponent {
         public:
