@@ -694,11 +694,11 @@ namespace Ubitrack { namespace Drivers {
                 }
                 if (config->hasAttribute("zedRecordingSVOFilename")){
                     boost::filesystem::path m_svo_filename_expanded = Ubitrack::Util::getFilesystemPath(config->getAttributeString("zedRecordingSVOFilename"));
-                    m_svo_filename = m_svo_filename.string();
+                    m_svo_filename = m_svo_filename_expanded.string();
                 }
                 if (config->hasAttribute("zedRecordingTimestampFilename")){
                     boost::filesystem::path m_timestamp_filename_expanded = Ubitrack::Util::getFilesystemPath(config->getAttributeString("zedRecordingTimestampFilename"));
-                    m_timestamp_filename = m_timestamp_filename.string();
+                    m_timestamp_filename = m_timestamp_filename_expanded.string();
                 }
                 if (config->hasAttribute("zedSvoCompressionMode")) {
                     std::string sCompressionMode = config->getAttributeString("zedSvoCompressionMode");
@@ -715,7 +715,7 @@ namespace Ubitrack { namespace Drivers {
                 }
                 if (config->hasAttribute("zedPlaybackSVOFilename")) {
                     boost::filesystem::path m_svo_player_filename_expanded = Ubitrack::Util::getFilesystemPath(config->getAttributeString("zedPlaybackSVOFilename"));
-                    m_svo_player_filename = m_svo_player_filename.string();
+                    m_svo_player_filename = m_svo_player_filename_expanded.string();
                 }
 
             }
