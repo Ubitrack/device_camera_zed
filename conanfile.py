@@ -36,6 +36,7 @@ class DeviceCameraZedConan(ConanFile):
     # all sources are deployed with the package
     exports_sources = "cmake/*", "include/*", "doc/*", "lib/*", "src/*", "CMakeLists.txt"
 
+    #pull zed-sdk libs
     def imports(self):
         self.copy(pattern="*.dll", dst="bin", src="bin") # From bin to bin
         self.copy(pattern="*.dylib*", dst="lib", src="lib") 
