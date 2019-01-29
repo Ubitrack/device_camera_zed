@@ -53,6 +53,8 @@
 #include <boost/scoped_ptr.hpp>
 #include <boost/filesystem.hpp>
 
+#include <utUtil/FileSystem.h>
+
 #include <utDataflow/PushSupplier.h>
 #include <utDataflow/PullSupplier.h>
 #include <utDataflow/PushConsumer.h>
@@ -691,10 +693,12 @@ namespace Ubitrack { namespace Drivers {
                     m_recording_enabled = config->getAttributeString("zedRecordingEnabled") == "true";
                 }
                 if (config->hasAttribute("zedRecordingSVOFilename")){
-                    m_svo_filename = config->getAttributeString("zedRecordingSVOFilename");
+                    boost::filesystem::path m_svo_filename_expanded = getFilesystemPath(config->getAttributeString("zedRecordingSVOFilename"));
+                    m_svo_filename = m_svo_filename.string();
                 }
                 if (config->hasAttribute("zedRecordingTimestampFilename")){
-                    m_timestamp_filename = config->getAttributeString("zedRecordingTimestampFilename");
+                    boost::filesystem::path m_timestamp_filename_expanded = getFilesystemPath(config->getAttributeString("zedRecordingTimestampFilename"));
+                    m_timestamp_filename = m_timestamp_filename.string();
                 }
                 if (config->hasAttribute("zedSvoCompressionMode")) {
                     std::string sCompressionMode = config->getAttributeString("zedSvoCompressionMode");
@@ -710,7 +714,8 @@ namespace Ubitrack { namespace Drivers {
                     }
                 }
                 if (config->hasAttribute("zedPlaybackSVOFilename")) {
-                    m_svo_player_filename = config->getAttributeString("zedPlaybackSVOFilename");
+                    boost::filesystem::path m_svo_player_filename_expanded = getFilesystemPath(config->getAttributeString("zedPlaybackSVOFilename"));
+                    m_svo_player_filename = m_svo_player_filename.string();
                 }
 
             }
