@@ -230,22 +230,11 @@ void ZEDModule::captureThread()
     // Set configuration parameters
     sl::InitParameters init_params;
 
-#ifdef ENABLE_EVENT_TRACING
-    int eventdomain = -1;
-#endif
-
     // pull configuration
     ComponentList allComponents = getAllComponents();
 
     for (auto i = allComponents.begin(); i != allComponents.end(); ++i) {
         (*i)->configure(init_params);
-#ifdef ENABLE_EVENT_TRACING
-        if (eventdomain == -1) {
-            eventdomain = (*i)->getEventDomain();
-        } else if (eventdomain != (*i)->getEventDomain()) {
-            LOG4CPP_WARN(logger, "Multiple Components of the same module are in different event domains !!!");
-        }
-#endif
     }
 
     // if device is not configured for playback, configure sensor as follows
@@ -290,10 +279,6 @@ void ZEDModule::captureThread()
 
     while (!m_bStop) {
 
-
-#ifdef ENABLE_EVENT_TRACING
-        TRACEPOINT_MEASUREMENT_CREATE(eventdomain, time, "zed_camera", "VideoCapture")
-#endif
         sl::ERROR_CODE err = m_zedcamera.grab(runtime_parameters);
         if (err != sl::SUCCESS) {
             if (err == sl::ERROR_CODE_NOT_A_NEW_FRAME) {
@@ -381,6 +366,9 @@ void ZEDVideoComponent::process(Measurement::Timestamp ts, sl::Camera &cam) {
 
     if (m_outputPort.isConnected()) {
 
+#ifdef ENABLE_EVENT_TRACING
+        TRACEPOINT_MEASUREMENT_CREATE(getEventDomain(), ts, getName().c_str(), "VideoCapture")
+#endif
 
         cv::Mat image_ocv(m_imageHeight, m_imageWidth, m_imageFormatProperties.matType);
 
@@ -482,6 +470,10 @@ void ZEDPointCloudComponent::process(Measurement::Timestamp ts, sl::Camera &cam)
 
     if (m_outputPort.isConnected()) {
 
+#ifdef ENABLE_EVENT_TRACING
+        TRACEPOINT_MEASUREMENT_CREATE(getEventDomain(), ts, getName().c_str(), "VideoCapture")
+#endif
+
         // we're copying twice here - once from driver to app space and then we clone the image ..
         // should be fixed by first allocation the image and referencing the sl::Mat with allocated memory.
         sl::ERROR_CODE err = cam.retrieveMeasure(*m_pointcloud_zed, m_componentKey.getMeasureSource(), sl::MEM_CPU, m_imageWidth, m_imageHeight);
@@ -549,6 +541,10 @@ void ZEDDepthMapComponent::init(sl::Camera &cam) {
 void ZEDDepthMapComponent::process(Measurement::Timestamp ts, sl::Camera &cam) {
 
     if (m_outputPort.isConnected()) {
+
+#ifdef ENABLE_EVENT_TRACING
+        TRACEPOINT_MEASUREMENT_CREATE(getEventDomain(), ts, getName().c_str(), "VideoCapture")
+#endif
 
 
         cv::Mat image_ocv(m_imageHeight, m_imageWidth, m_imageFormatProperties.matType);
