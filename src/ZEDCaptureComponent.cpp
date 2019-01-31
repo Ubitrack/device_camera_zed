@@ -230,11 +230,22 @@ void ZEDModule::captureThread()
     // Set configuration parameters
     sl::InitParameters init_params;
 
+#ifdef ENABLE_EVENT_TRACING
+    int eventdomain = -1;
+#endif
+
     // pull configuration
     ComponentList allComponents = getAllComponents();
 
     for (auto i = allComponents.begin(); i != allComponents.end(); ++i) {
         (*i)->configure(init_params);
+#ifdef ENABLE_EVENT_TRACING
+        if (eventdomain == -1) {
+            eventdomain = (*i)->getEventDomain();
+        } else if (eventdomain != (*i)->getEventDomain()) {
+            LOG4CPP_WARN(logger, "Multiple Components of the same module are in different event domains !!!");
+        }
+#endif
     }
 
     // if device is not configured for playback, configure sensor as follows
@@ -281,7 +292,7 @@ void ZEDModule::captureThread()
 
 
 #ifdef ENABLE_EVENT_TRACING
-        TRACEPOINT_MEASUREMENT_CREATE(getEventDomain(), time, getName().c_str(), "VideoCapture")
+        TRACEPOINT_MEASUREMENT_CREATE(eventdomain, time, "zed_camera", "VideoCapture")
 #endif
         sl::ERROR_CODE err = m_zedcamera.grab(runtime_parameters);
         if (err != sl::SUCCESS) {
