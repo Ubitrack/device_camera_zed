@@ -73,9 +73,8 @@
 // OpenCV includes
 #include <opencv2/opencv.hpp>
 
-namespace {
 
-
+namespace Ubitrack { namespace Drivers {
     enum ZEDSensorType {
         ZED_SENSOR_RECORD = 0,
         ZED_SENSOR_CONFIG,
@@ -85,16 +84,20 @@ namespace {
         ZED_SENSOR_MAPPING
     };
 
+}}
 
-    class ZEDSensorTypeMap : public std::map<std::string, ZEDSensorType > {
+namespace {
+
+
+    class ZEDSensorTypeMap : public std::map<std::string, Ubitrack::Drivers::ZEDSensorType > {
     public:
         ZEDSensorTypeMap() {
-            (*this)["RECORD"] = ZED_SENSOR_RECORD;
-            (*this)["CONFIG"] = ZED_SENSOR_CONFIG;
-            (*this)["VIDEO"] = ZED_SENSOR_VIDEO;
-            (*this)["DEPTH"] = ZED_SENSOR_DEPTH;
-            (*this)["TRACKING"] = ZED_SENSOR_TRACKING;
-            (*this)["MAPPING"] = ZED_SENSOR_MAPPING;
+            (*this)["RECORD"] = Ubitrack::Drivers::ZED_SENSOR_RECORD;
+            (*this)["CONFIG"] = Ubitrack::Drivers::ZED_SENSOR_CONFIG;
+            (*this)["VIDEO"] = Ubitrack::Drivers::ZED_SENSOR_VIDEO;
+            (*this)["DEPTH"] = Ubitrack::Drivers::ZED_SENSOR_DEPTH;
+            (*this)["TRACKING"] = Ubitrack::Drivers::ZED_SENSOR_TRACKING;
+            (*this)["MAPPING"] = Ubitrack::Drivers::ZED_SENSOR_MAPPING;
         }
     };
     static ZEDSensorTypeMap zedSensorTypeMap;
