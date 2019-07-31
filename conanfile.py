@@ -16,25 +16,31 @@ class DeviceCameraZedConan(ConanFile):
     options = {
         "zedsdk_version": ["2.7.1", ],
         "zedsdk_root": "ANY",
+        "workspaceBuild" : [True,False],
         }
-    default_options = (
-        "zedsdk_version=2.7.1",
-        "zedsdk_root=/usr/local/zed",
-        )
+    default_options = {
+        "zedsdk_version" : "2.7.1",
+        "zedsdk_root" : "/usr/local/zed",
+        "workspaceBuild" : False,
+        }
 
     short_paths = True
     settings = "os", "compiler", "build_type", "arch"
     generators = "cmake"
-    requires = (
-        "ubitrack_core/%s@ubitrack/stable" % version,
-        "ubitrack_vision/%s@ubitrack/stable" % version,
-        "ubitrack_dataflow/%s@ubitrack/stable" % version,
-        "opencv/[>=3.2.0]@camposs/stable", 
-        # "cuda_dev_config/[>=1.0]@camposs/stable",
-       )
 
     # all sources are deployed with the package
     exports_sources = "cmake/*", "include/*", "doc/*", "lib/*", "src/*", "CMakeLists.txt"
+
+    def requirements(self):
+        userChannel = "ubitrack/stable"
+        if self.options.workspaceBuild:
+            userChannel = "local/dev"
+
+        self.requires("ubitrack_core/%s@%s" % (self.version, userChannel))
+        self.requires("ubitrack_vision/%s@%s" % (self.version, userChannel))
+        self.requires("ubitrack_dataflow/%s@%s" % (self.version, userChannel))
+        self.requires("opencv/[>=3.2.0]@camposs/stable")
+        # "cuda_dev_config/[>=1.0]@camposs/stable",
 
     #pull zed-sdk libs
     def imports(self):
